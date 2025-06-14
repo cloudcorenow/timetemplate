@@ -1,8 +1,8 @@
-# Stage 1: Build the React/Vite application
+# Stage 1: Build application
 FROM node:20-alpine AS builder
 WORKDIR /app
 
-# Copy dependency files first (optimizes Docker cache)
+# Copy dependency files (optimizes caching)
 COPY package*.json ./
 COPY *.config.* ./
 
@@ -12,24 +12,23 @@ RUN npm ci
 # Copy source code
 COPY . .
 
-# Build the application
+# Build application
 RUN npm run build
 
 # Stage 2: Production server
 FROM nginx:1.25-alpine
-WORKDIR /usr/share/nginx/html
 
-# Remove default nginx files
-RUN rm -rf ./*
+# Remove default nginx content
+RUN rm -rf /usr/share/nginx/html/*
 
-# Copy built application from builder stage
-COPY --from=builder /app/dist .
+# Copy built application
+COPY --from=builder /app/dist /usr/share/nginx/html
 
 # Copy custom nginx configuration
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
-# Expose port 80
-EXPOSE 80
+# Set permissions (important for CapRover)
+RUN chown -R nginx:nginx /usr/share/nginx/html
 
-# Start nginx
+EXPOSE 80
 CMD ["nginx", "-g", "daemon off;"]
