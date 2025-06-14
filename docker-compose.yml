@@ -1,0 +1,22 @@
+version: '3.8'
+
+services:
+  timetemplate:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: timetemplate:latest
+    container_name: timetemplate
+    networks:
+      mynet:
+        ipv4_address: 10.0.20.1
+    restart: unless-stopped
+    logging:
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+networks:
+  mynet:
+    external: true
+    name: mynet
