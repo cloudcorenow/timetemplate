@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">TimeOff Manager</string>
+    <string name="title_activity_main">TimeOff Manager</string>
+    <string name="package_name">com.timeoff.app</string>
+    <string name="custom_url_scheme">com.timeoff.app</string>
+</resources>

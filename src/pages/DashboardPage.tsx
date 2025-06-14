@@ -1,0 +1,217 @@
+import React, { useEffect, useState } from 'react';
+import { useAuth } from '../context/AuthContext';
+import { useRequestStore } from '../store/requestStore';
+import { TimeOffRequest } from '../types/request';
+import { Check, X, CalendarDays, Users, Clock, Plus } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import StatsCard from '../components/dashboard/StatsCard';
+import RequestList from '../components/dashboard/RequestList';
+
+const DashboardPage: React.FC = () => {
+  const { user, isManager, isAdmin } = useAuth();
+  const { requests, fetchRequests, isLoading } = useRequestStore();
+  const [filteredRequests, setFilteredRequests] = useState<TimeOffRequest[]>([]);
+  const [activeFilter, setActiveFilter] = useState<string>('all');
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    fetchRequests();
+  }, [fetchRequests]);
+
+  useEffect(() => {
+    if (isAdmin) {
+      // Admins see all requests
+      setFilteredRequests(requests);
+    } else if (isManager) {
+      // Managers see requests from their department
+      setFilteredRequests(
+        requests.filter(request => request.employee.department === user?.department)
+      );
+    } else if (user) {
+      // Employees only see their own requests
+      setFilteredRequests(
+        requests.filter(request => request.employee.id === user.id)
+      );
+    }
+  }, [requests, user, isManager, isAdmin]);
+
+  const filterRequests = (filter: string) => {
+    setActiveFilter(filter);
+
+    let baseRequests = requests;
+    if (!isAdmin && isManager && user) {
+      baseRequests = requests.filter(request => request.employee.department === user.department);
+    } else if (!isAdmin && !isManager && user) {
+      baseRequests = requests.filter(request => request.employee.id === user.id);
+    }
+
+    switch (filter) {
+      case 'pending':
+        setFilteredRequests(
+          baseRequests.filter(request => request.status === 'pending')
+        );
+        break;
+      case 'approved':
+        setFilteredRequests(
+          baseRequests.filter(request => request.status === 'approved')
+        );
+        break;
+      case 'rejected':
+        setFilteredRequests(
+          baseRequests.filter(request => request.status === 'rejected')
+        );
+        break;
+      default:
+        setFilteredRequests(baseRequests);
+        break;
+    }
+  };
+
+  const pendingCount = filteredRequests.filter(r => r.status === 'pending').length;
+  const approvedCount = filteredRequests.filter(r => r.status === 'approved').length;
+  const rejectedCount = filteredRequests.filter(r => r.status === 'rejected').length;
+  
+  const employeeCount = isAdmin 
+    ? new Set(requests.map(r => r.employee.id)).size
+    : isManager && user
+    ? new Set(requests.filter(r => r.employee.department === user.department).map(r => r.employee.id)).size 
+    : 0;
+
+  if (isLoading) {
+    return (
+      <div className="flex h-full items-center justify-center">
+        <div className="text-center">
+          <div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-t-blue-600"></div>
+          <p className="mt-2 text-gray-500">Loading dashboard...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-800">
+            {isAdmin ? 'Admin Dashboard' : isManager ? 'Manager Dashboard' : 'My Time Off'}
+          </h1>
+          <p className="mt-1 text-gray-600">
+            {isAdmin
+              ? 'Manage time off requests across all departments'
+              : isManager
+              ? 'Manage time off requests for your team'
+              : 'View and manage your time off requests'}
+          </p>
+        </div>
+        
+        {!isManager && !isAdmin && (
+          <button
+            onClick={() => navigate('/request')}
+            className="flex items-center rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+          >
+            <Plus size={16} className="mr-2" />
+            New Request
+          </button>
+        )}
+      </div>
+
+      {/* Stats Section */}
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
+        <StatsCard 
+          title="Pending Requests" 
+          value={pendingCount.toString()} 
+          icon={<Clock className="text-amber-500" />}
+          color="bg-amber-100"
+          textColor="text-amber-600" 
+        />
+        <StatsCard 
+          title="Approved Requests" 
+          value={approvedCount.toString()} 
+          icon={<Check className="text-green-500" />}
+          color="bg-green-100"
+          textColor="text-green-600"
+        />
+        <StatsCard 
+          title="Rejected Requests" 
+          value={rejectedCount.toString()} 
+          icon={<X className="text-red-500" />}
+          color="bg-red-100"
+          textColor="text-red-600"
+        />
+        {(isManager || isAdmin) ? (
+          <StatsCard 
+            title="Team Members" 
+            value={employeeCount.toString()} 
+            icon={<Users className="text-blue-500" />}
+            color="bg-blue-100"
+            textColor="text-blue-600"
+          />
+        ) : (
+          <StatsCard 
+            title="Upcoming Time Off" 
+            value={requests.filter(r => 
+              r.employee.id === user?.id && 
+              r.status === 'approved' && 
+              new Date(r.startDate) > new Date()
+            ).length.toString()} 
+            icon={<CalendarDays className="text-purple-500" />}
+            color="bg-purple-100"
+            textColor="text-purple-600"
+          />
+        )}
+      </div>
+
+      {/* Filters */}
+      <div className="flex gap-2 overflow-x-auto pb-2">
+        <button
+          onClick={() => filterRequests('all')}
+          className={`rounded-full px-4 py-2 text-sm font-medium ${
+            activeFilter === 'all'
+              ? 'bg-blue-600 text-white'
+              : 'bg-white text-gray-700 hover:bg-gray-100'
+          }`}
+        >
+          All
+        </button>
+        <button
+          onClick={() => filterRequests('pending')}
+          className={`rounded-full px-4 py-2 text-sm font-medium ${
+            activeFilter === 'pending'
+              ? 'bg-amber-500 text-white'
+              : 'bg-white text-gray-700 hover:bg-gray-100'
+          }`}
+        >
+          Pending
+        </button>
+        <button
+          onClick={() => filterRequests('approved')}
+          className={`rounded-full px-4 py-2 text-sm font-medium ${
+            activeFilter === 'approved'
+              ? 'bg-green-600 text-white'
+              : 'bg-white text-gray-700 hover:bg-gray-100'
+          }`}
+        >
+          Approved
+        </button>
+        <button
+          onClick={() => filterRequests('rejected')}
+          className={`rounded-full px-4 py-2 text-sm font-medium ${
+            activeFilter === 'rejected'
+              ? 'bg-red-600 text-white'
+              : 'bg-white text-gray-700 hover:bg-gray-100'
+          }`}
+        >
+          Rejected
+        </button>
+      </div>
+
+      {/* Request List */}
+      <RequestList 
+        requests={filteredRequests} 
+        isManager={isManager || isAdmin} 
+      />
+    </div>
+  );
+};
+
+export default DashboardPage;
