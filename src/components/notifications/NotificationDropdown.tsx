@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { format } from 'date-fns';
 import { Bell, Check, Info, AlertTriangle, XCircle } from 'lucide-react';
 import { useNotificationStore } from '../../store/notificationStore';
@@ -10,12 +10,18 @@ interface NotificationDropdownProps {
 }
 
 const NotificationDropdown: React.FC<NotificationDropdownProps> = ({ isOpen, onClose }) => {
-  const { notifications, markAsRead, markAllAsRead } = useNotificationStore();
+  const { notifications, fetchNotifications, markAsRead, markAllAsRead, isLoading } = useNotificationStore();
+
+  useEffect(() => {
+    if (isOpen) {
+      fetchNotifications();
+    }
+  }, [isOpen, fetchNotifications]);
 
   const getIcon = (type: NotificationType) => {
     switch (type) {
       case 'success':
-        return <Check className="text-green-500\" size={16} />;
+        return <Check className="text-green-500" size={16} />;
       case 'warning':
         return <AlertTriangle className="text-amber-500" size={16} />;
       case 'error':
@@ -35,6 +41,7 @@ const NotificationDropdown: React.FC<NotificationDropdownProps> = ({ isOpen, onC
           <button
             onClick={markAllAsRead}
             className="text-xs text-blue-600 hover:text-blue-800"
+            disabled={isLoading}
           >
             Mark all as read
           </button>
@@ -42,7 +49,11 @@ const NotificationDropdown: React.FC<NotificationDropdownProps> = ({ isOpen, onC
       </div>
 
       <div className="max-h-96 overflow-y-auto">
-        {notifications.length === 0 ? (
+        {isLoading ? (
+          <div className="px-4 py-6 text-center text-sm text-gray-500">
+            Loading notifications...
+          </div>
+        ) : notifications.length === 0 ? (
           <div className="px-4 py-6 text-center text-sm text-gray-500">
             No notifications
           </div>

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Menu, Bell, LogOut, Upload } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
@@ -16,18 +16,29 @@ const Header: React.FC<HeaderProps> = ({ openSidebar }) => {
   const [showNotifications, setShowNotifications] = useState(false);
   const [showAvatarModal, setShowAvatarModal] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState(user?.avatar || '');
-  const { unreadCount } = useNotificationStore();
+  const { unreadCount, fetchUnreadCount } = useNotificationStore();
+
+  // Fetch unread count on component mount and periodically
+  useEffect(() => {
+    fetchUnreadCount();
+    const interval = setInterval(fetchUnreadCount, 30000); // Every 30 seconds
+    return () => clearInterval(interval);
+  }, [fetchUnreadCount]);
 
   const handleLogout = () => {
     logout();
     navigate('/login');
   };
 
-  const handleAvatarUpdate = () => {
+  const handleAvatarUpdate = async () => {
     if (avatarUrl.trim()) {
-      updateAvatar(avatarUrl);
-      setShowAvatarModal(false);
-      setShowDropdown(false);
+      try {
+        await updateAvatar(avatarUrl);
+        setShowAvatarModal(false);
+        setShowDropdown(false);
+      } catch (error) {
+        console.error('Failed to update avatar:', error);
+      }
     }
   };
 

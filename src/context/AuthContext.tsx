@@ -1,6 +1,6 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { User } from '../types/user';
-import { mockUsers } from '../data/mockData';
+import { apiService } from '../services/api';
 
 interface AuthContextType {
   user: User | null;
@@ -10,7 +10,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   isManager: boolean;
   isAdmin: boolean;
-  updateAvatar: (avatarUrl: string) => void;
+  updateAvatar: (avatarUrl: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -21,7 +21,7 @@ const AuthContext = createContext<AuthContextType>({
   isAuthenticated: false,
   isManager: false,
   isAdmin: false,
-  updateAvatar: () => {}
+  updateAvatar: () => Promise.resolve()
 });
 
 export const useAuth = () => useContext(AuthContext);
@@ -32,24 +32,32 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     // Check if user is logged in from localStorage
-    const storedUser = localStorage.getItem('user');
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
+    const token = localStorage.getItem('token');
+    if (token) {
+      apiService.setToken(token);
+      // Verify token with backend
+      apiService.getCurrentUser()
+        .then(response => {
+          setUser(response.user);
+        })
+        .catch(() => {
+          // Token is invalid, remove it
+          localStorage.removeItem('token');
+          apiService.logout();
+        })
+        .finally(() => {
+          setLoading(false);
+        });
+    } else {
+      setLoading(false);
     }
-    setLoading(false);
   }, []);
 
   const login = async (email: string, password: string): Promise<boolean> => {
     try {
-      // Simulate API call with mock data
-      const foundUser = mockUsers.find(u => u.email === email);
-      
-      if (foundUser && password === 'password') { // Simple password check for demo
-        setUser(foundUser);
-        localStorage.setItem('user', JSON.stringify(foundUser));
-        return true;
-      }
-      return false;
+      const response = await apiService.login(email, password);
+      setUser(response.user);
+      return true;
     } catch (error) {
       console.error('Login error:', error);
       return false;
@@ -58,14 +66,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const logout = () => {
     setUser(null);
-    localStorage.removeItem('user');
+    apiService.logout();
   };
 
-  const updateAvatar = (avatarUrl: string) => {
-    if (user) {
-      const updatedUser = { ...user, avatar: avatarUrl };
-      setUser(updatedUser);
-      localStorage.setItem('user', JSON.stringify(updatedUser));
+  const updateAvatar = async (avatarUrl: string) => {
+    try {
+      await apiService.updateAvatar(avatarUrl);
+      if (user) {
+        setUser({ ...user, avatar: avatarUrl });
+      }
+    } catch (error) {
+      console.error('Avatar update error:', error);
+      throw error;
     }
   };
 
