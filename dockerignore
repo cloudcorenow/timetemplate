@@ -1,0 +1,25 @@
+# Ignore everything by default
+*
+
+# Allow these specific files/directories
+!src/
+!public/
+!*.config.*
+!package*.json
+!index.html
+!nginx.conf
+
+# Explicitly ignore problematic items
+.git
+.gitignore
+.dockerignore
+Dockerfile
+docker-compose.yml
+node_modules
+dist
+dist-ssr
+.env
+.vscode
+.idea
+*.log
+*.md
