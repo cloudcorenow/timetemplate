@@ -1,5 +1,5 @@
 const express = require('express');
-const { pool } = require('../config/database');
+const { dbAsync } = require('../config/database');
 const { authenticateToken, requireRole } = require('../middleware/auth');
 
 const router = express.Router();
@@ -35,7 +35,7 @@ router.get('/', authenticateToken, async (req, res) => {
 
     query += ' ORDER BY r.created_at DESC';
 
-    const [rows] = await pool.execute(query, params);
+    const rows = await dbAsync.all(query, params);
 
     // Transform the data to match frontend expectations
     const requests = rows.map(row => ({
@@ -92,7 +92,7 @@ router.post('/', authenticateToken, async (req, res) => {
 
     const requestId = generateId();
 
-    await pool.execute(`
+    await dbAsync.run(`
       INSERT INTO time_off_requests (
         id, employee_id, start_date, end_date, type, reason,
         original_clock_in, original_clock_out, 
@@ -113,13 +113,13 @@ router.post('/', authenticateToken, async (req, res) => {
 
     // Add notification for managers
     if (req.user.role === 'employee') {
-      const [managers] = await pool.execute(
+      const managers = await dbAsync.all(
         'SELECT id FROM users WHERE role IN ("manager", "admin") AND department = ?',
         [req.user.department]
       );
 
       for (const manager of managers) {
-        await pool.execute(`
+        await dbAsync.run(`
           INSERT INTO notifications (id, user_id, type, message)
           VALUES (?, ?, 'info', ?)
         `, [
@@ -148,19 +148,17 @@ router.patch('/:id/status', authenticateToken, requireRole(['manager', 'admin'])
     }
 
     // Get the request to find the employee
-    const [requestRows] = await pool.execute(
+    const request = await dbAsync.get(
       'SELECT employee_id, type FROM time_off_requests WHERE id = ?',
       [id]
     );
 
-    if (requestRows.length === 0) {
+    if (!request) {
       return res.status(404).json({ message: 'Request not found' });
     }
 
-    const request = requestRows[0];
-
     // Update request status
-    await pool.execute(`
+    await dbAsync.run(`
       UPDATE time_off_requests 
       SET status = ?, approved_by = ?, rejection_reason = ?, updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
@@ -171,7 +169,7 @@ router.patch('/:id/status', authenticateToken, requireRole(['manager', 'admin'])
       ? `Your ${request.type} request has been approved`
       : `Your ${request.type} request has been rejected`;
 
-    await pool.execute(`
+    await dbAsync.run(`
       INSERT INTO notifications (id, user_id, type, message)
       VALUES (?, ?, ?, ?)
     `, [

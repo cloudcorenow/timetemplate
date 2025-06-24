@@ -1,5 +1,5 @@
 const express = require('express');
-const { pool } = require('../config/database');
+const { dbAsync } = require('../config/database');
 const { authenticateToken } = require('../middleware/auth');
 
 const router = express.Router();
@@ -7,7 +7,7 @@ const router = express.Router();
 // Get notifications for current user
 router.get('/', authenticateToken, async (req, res) => {
   try {
-    const [rows] = await pool.execute(
+    const rows = await dbAsync.all(
       'SELECT * FROM notifications WHERE user_id = ? ORDER BY created_at DESC LIMIT 50',
       [req.user.id]
     );
@@ -32,8 +32,8 @@ router.patch('/:id/read', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
 
-    await pool.execute(
-      'UPDATE notifications SET is_read = TRUE WHERE id = ? AND user_id = ?',
+    await dbAsync.run(
+      'UPDATE notifications SET is_read = 1 WHERE id = ? AND user_id = ?',
       [id, req.user.id]
     );
 
@@ -47,8 +47,8 @@ router.patch('/:id/read', authenticateToken, async (req, res) => {
 // Mark all notifications as read
 router.patch('/read-all', authenticateToken, async (req, res) => {
   try {
-    await pool.execute(
-      'UPDATE notifications SET is_read = TRUE WHERE user_id = ?',
+    await dbAsync.run(
+      'UPDATE notifications SET is_read = 1 WHERE user_id = ?',
       [req.user.id]
     );
 
@@ -62,12 +62,12 @@ router.patch('/read-all', authenticateToken, async (req, res) => {
 // Get unread count
 router.get('/unread-count', authenticateToken, async (req, res) => {
   try {
-    const [rows] = await pool.execute(
-      'SELECT COUNT(*) as count FROM notifications WHERE user_id = ? AND is_read = FALSE',
+    const result = await dbAsync.get(
+      'SELECT COUNT(*) as count FROM notifications WHERE user_id = ? AND is_read = 0',
       [req.user.id]
     );
 
-    res.json({ count: rows[0].count });
+    res.json({ count: result.count });
   } catch (error) {
     console.error('Get unread count error:', error);
     res.status(500).json({ message: 'Failed to get unread count' });

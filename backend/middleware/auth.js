@@ -1,5 +1,5 @@
 const jwt = require('jsonwebtoken');
-const { pool } = require('../config/database');
+const { dbAsync } = require('../config/database');
 
 const authenticateToken = async (req, res, next) => {
   const authHeader = req.headers['authorization'];
@@ -13,16 +13,16 @@ const authenticateToken = async (req, res, next) => {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     
     // Get user from database to ensure they still exist
-    const [rows] = await pool.execute(
+    const user = await dbAsync.get(
       'SELECT id, name, email, role, department, avatar FROM users WHERE id = ?',
       [decoded.userId]
     );
 
-    if (rows.length === 0) {
+    if (!user) {
       return res.status(403).json({ message: 'User not found' });
     }
 
-    req.user = rows[0];
+    req.user = user;
     next();
   } catch (error) {
     console.error('Auth error:', error);

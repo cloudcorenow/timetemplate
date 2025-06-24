@@ -1,7 +1,7 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const { pool } = require('../config/database');
+const { dbAsync } = require('../config/database');
 const { authenticateToken } = require('../middleware/auth');
 
 const router = express.Router();
@@ -16,16 +16,14 @@ router.post('/login', async (req, res) => {
     }
 
     // Get user from database
-    const [rows] = await pool.execute(
+    const user = await dbAsync.get(
       'SELECT * FROM users WHERE email = ?',
       [email]
     );
 
-    if (rows.length === 0) {
+    if (!user) {
       return res.status(401).json({ message: 'Invalid credentials' });
     }
-
-    const user = rows[0];
 
     // Verify password
     const isValidPassword = await bcrypt.compare(password, user.password);
@@ -64,7 +62,7 @@ router.patch('/avatar', authenticateToken, async (req, res) => {
     const { avatar } = req.body;
     const userId = req.user.id;
 
-    await pool.execute(
+    await dbAsync.run(
       'UPDATE users SET avatar = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
       [avatar, userId]
     );

@@ -1,41 +1,82 @@
-const mysql = require('mysql2/promise');
+const sqlite3 = require('sqlite3').verbose();
+const path = require('path');
 require('dotenv').config();
 
-const dbConfig = {
-  host: process.env.DB_HOST || '10.0.20.3',
-  port: process.env.DB_PORT || 3306,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  database: process.env.DB_NAME || 'timeoff_manager',
-  waitForConnections: true,
-  connectionLimit: 10,
-  queueLimit: 0,
-  acquireTimeout: 60000,
-  timeout: 60000,
-  reconnect: true
-};
+// Database file path
+const dbPath = process.env.DB_PATH || path.join(__dirname, '..', 'data', 'timeoff.db');
 
-// Create connection pool
-const pool = mysql.createPool(dbConfig);
+// Ensure data directory exists
+const fs = require('fs');
+const dataDir = path.dirname(dbPath);
+if (!fs.existsSync(dataDir)) {
+  fs.mkdirSync(dataDir, { recursive: true });
+}
+
+// Create database connection
+const db = new sqlite3.Database(dbPath, (err) => {
+  if (err) {
+    console.error('❌ Database connection failed:', err.message);
+  } else {
+    console.log('✅ Database connected successfully to', dbPath);
+  }
+});
+
+// Enable foreign keys
+db.run('PRAGMA foreign_keys = ON');
+
+// Promisify database methods for easier async/await usage
+const dbAsync = {
+  run: (sql, params = []) => {
+    return new Promise((resolve, reject) => {
+      db.run(sql, params, function(err) {
+        if (err) reject(err);
+        else resolve({ id: this.lastID, changes: this.changes });
+      });
+    });
+  },
+  
+  get: (sql, params = []) => {
+    return new Promise((resolve, reject) => {
+      db.get(sql, params, (err, row) => {
+        if (err) reject(err);
+        else resolve(row);
+      });
+    });
+  },
+  
+  all: (sql, params = []) => {
+    return new Promise((resolve, reject) => {
+      db.all(sql, params, (err, rows) => {
+        if (err) reject(err);
+        else resolve(rows);
+      });
+    });
+  }
+};
 
 // Test database connection
 const testConnection = async () => {
   try {
-    const connection = await pool.getConnection();
-    console.log('✅ Database connected successfully to', process.env.DB_HOST);
-    connection.release();
+    await dbAsync.get('SELECT 1 as test');
+    console.log('✅ Database test query successful');
     return true;
   } catch (error) {
-    console.error('❌ Database connection failed:', error.message);
+    console.error('❌ Database test failed:', error.message);
     return false;
   }
 };
 
 // Graceful shutdown
-process.on('SIGINT', async () => {
-  console.log('Closing database connections...');
-  await pool.end();
-  process.exit(0);
+process.on('SIGINT', () => {
+  console.log('Closing database connection...');
+  db.close((err) => {
+    if (err) {
+      console.error('Error closing database:', err.message);
+    } else {
+      console.log('Database connection closed.');
+    }
+    process.exit(0);
+  });
 });
 
-module.exports = { pool, testConnection };
+module.exports = { db, dbAsync, testConnection };

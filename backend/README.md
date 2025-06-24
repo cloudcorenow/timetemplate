@@ -1,6 +1,6 @@
 # TimeOff Manager Backend API
 
-This is the backend API server for the TimeOff Manager application, designed to connect to a MySQL database.
+This is the backend API server for the TimeOff Manager application, now using SQLite for easy setup and development.
 
 ## Setup Instructions
 
@@ -16,14 +16,10 @@ Copy the example environment file and configure it:
 cp .env.example .env
 ```
 
-Edit the `.env` file with your MySQL database credentials:
+Edit the `.env` file with your configuration:
 ```env
 # Database Configuration
-DB_HOST=10.0.20.3
-DB_PORT=3306
-DB_USER=your_mysql_username
-DB_PASSWORD=your_mysql_password
-DB_NAME=timeoff_manager
+DB_PATH=./data/timeoff.db
 
 # JWT Configuration
 JWT_SECRET=your_super_secret_jwt_key_here_make_it_long_and_random
@@ -36,8 +32,17 @@ NODE_ENV=development
 FRONTEND_URL=http://localhost:5173
 ```
 
-### 3. Database Setup
-Make sure your MySQL database is set up with the schema from the migration file. The database should be accessible at `10.0.20.3:3306`.
+### 3. Initialize Database
+Run the database initialization script to create tables and sample data:
+```bash
+npm run init-db
+```
+
+This will:
+- Create the SQLite database file
+- Set up all required tables
+- Insert sample users and data
+- Display available test accounts
 
 ### 4. Start the Server
 
@@ -50,6 +55,24 @@ For production:
 ```bash
 npm start
 ```
+
+## Database
+
+### SQLite Benefits
+- **Zero Setup**: No database server installation required
+- **File-based**: Database stored in a single file (`./data/timeoff.db`)
+- **Portable**: Easy to backup, copy, or reset
+- **Production Ready**: Used by major applications
+
+### Sample Accounts
+After running `npm run init-db`, you can use these test accounts:
+
+- **Employee**: `employee@example.com` / `password`
+- **Manager**: `manager@example.com` / `password`  
+- **Admin**: `admin@example.com` / `password`
+
+### Database Location
+The SQLite database file is stored at `./data/timeoff.db` by default. You can change this by setting the `DB_PATH` environment variable.
 
 ## API Endpoints
 
@@ -85,10 +108,36 @@ npm start
 - Input validation
 - SQL injection prevention (parameterized queries)
 
-## Database Connection
+## Database Management
 
-The server automatically tests the database connection on startup. If the connection fails, the server will exit with an error code.
+### Reset Database
+To reset the database and start fresh:
+```bash
+rm -f ./data/timeoff.db
+npm run init-db
+```
 
-## Error Handling
+### Backup Database
+Simply copy the database file:
+```bash
+cp ./data/timeoff.db ./data/timeoff-backup.db
+```
 
-All endpoints include proper error handling with appropriate HTTP status codes and error messages.
+### View Database
+You can use any SQLite browser or command line tool:
+```bash
+sqlite3 ./data/timeoff.db
+.tables
+.schema users
+SELECT * FROM users;
+```
+
+## Migration from MySQL
+
+This version has been converted from MySQL to SQLite with the following changes:
+- Replaced `mysql2` with `sqlite3`
+- Updated SQL syntax for SQLite compatibility
+- Simplified database connection (no server required)
+- Maintained all existing functionality
+
+The API endpoints and frontend remain unchanged, making this a drop-in replacement.

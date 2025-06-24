@@ -1,5 +1,5 @@
 const express = require('express');
-const { pool } = require('../config/database');
+const { dbAsync } = require('../config/database');
 const { authenticateToken, requireRole } = require('../middleware/auth');
 
 const router = express.Router();
@@ -7,7 +7,7 @@ const router = express.Router();
 // Get all users (admin only)
 router.get('/', authenticateToken, requireRole(['admin']), async (req, res) => {
   try {
-    const [rows] = await pool.execute(
+    const rows = await dbAsync.all(
       'SELECT id, name, email, role, department, avatar, created_at FROM users ORDER BY name'
     );
 
@@ -33,7 +33,7 @@ router.get('/team', authenticateToken, requireRole(['manager', 'admin']), async 
 
     query += ' ORDER BY name';
 
-    const [rows] = await pool.execute(query, params);
+    const rows = await dbAsync.all(query, params);
     res.json(rows);
   } catch (error) {
     console.error('Get team error:', error);
