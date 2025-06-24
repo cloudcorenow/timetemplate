@@ -7,12 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview",
-    "backend:install": "cd backend && npm install",
-    "backend:dev": "cd backend && npm run dev",
-    "backend:start": "cd backend && npm start",
-    "dev:full": "concurrently \"npm run dev\" \"npm run backend:dev\"",
-    "setup": "npm install && npm run backend:install"
+    "preview": "vite preview"
   },
   "dependencies": {
     "@capacitor/android": "^5.7.0",
