@@ -647,6 +647,49 @@ app.put('/api/users/:id', authMiddleware, adminMiddleware, async (c) => {
   }
 })
 
+// Reset user password
+app.patch('/api/users/:id/password', authMiddleware, adminMiddleware, async (c) => {
+  try {
+    const { id } = c.req.param()
+    const { password } = await c.req.json()
+
+    if (!password || password.length < 4) {
+      return c.json({ message: 'Password must be at least 4 characters long' }, 400)
+    }
+
+    // Check if user exists
+    const existingUser = await c.env.DB.prepare(
+      'SELECT id, name FROM users WHERE id = ?'
+    ).bind(id).first()
+
+    if (!existingUser) {
+      return c.json({ message: 'User not found' }, 404)
+    }
+
+    // Update password
+    await c.env.DB.prepare(`
+      UPDATE users 
+      SET password = ?, updated_at = CURRENT_TIMESTAMP
+      WHERE id = ?
+    `).bind(password, id).run()
+
+    // Add notification for the user
+    await c.env.DB.prepare(`
+      INSERT INTO notifications (id, user_id, type, message)
+      VALUES (?, ?, 'warning', ?)
+    `).bind(
+      crypto.randomUUID(),
+      id,
+      'Your password has been reset by an administrator. Please log in with your new password.'
+    ).run()
+
+    return c.json({ message: 'Password reset successfully' })
+  } catch (error) {
+    console.error('Reset password error:', error)
+    return c.json({ message: 'Failed to reset password' }, 500)
+  }
+})
+
 // Delete user
 app.delete('/api/users/:id', authMiddleware, adminMiddleware, async (c) => {
   try {

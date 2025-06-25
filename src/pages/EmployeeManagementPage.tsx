@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { User } from '../types/user';
-import { UserPlus, Pencil, Trash2, Check, X } from 'lucide-react';
+import { UserPlus, Pencil, Trash2, Check, X, Key } from 'lucide-react';
 import { apiService } from '../services/api';
 
 const departments = ['Engineering', 'Marketing', 'Sales', 'HR', 'Finance', 'Project Management', 'Shop', 'IT'];
@@ -13,6 +13,8 @@ const EmployeeManagementPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [isAddingEmployee, setIsAddingEmployee] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState<User | null>(null);
+  const [resettingPasswordFor, setResettingPasswordFor] = useState<User | null>(null);
+  const [newPassword, setNewPassword] = useState('');
   const [newEmployee, setNewEmployee] = useState({
     name: '',
     email: '',
@@ -119,9 +121,29 @@ const EmployeeManagementPage: React.FC = () => {
     }
   };
 
+  const handleResetPassword = async () => {
+    if (!resettingPasswordFor || !newPassword.trim()) return;
+
+    try {
+      await apiService.resetUserPassword(resettingPasswordFor.id, newPassword);
+      
+      setResettingPasswordFor(null);
+      setNewPassword('');
+      setError(null);
+      
+      // Show success message
+      alert(`Password reset successfully for ${resettingPasswordFor.name}. They will be notified of the change.`);
+    } catch (error: any) {
+      console.error('Error resetting password:', error);
+      setError(error.message || 'Failed to reset password');
+    }
+  };
+
   const cancelEdit = () => {
     setEditingEmployee(null);
     setIsAddingEmployee(false);
+    setResettingPasswordFor(null);
+    setNewPassword('');
     setNewEmployee({
       name: '',
       email: '',
@@ -173,7 +195,7 @@ const EmployeeManagementPage: React.FC = () => {
           <button
             onClick={() => setIsAddingEmployee(true)}
             className="flex items-center rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
-            disabled={editingEmployee !== null}
+            disabled={editingEmployee !== null || resettingPasswordFor !== null}
           >
             <UserPlus size={16} className="mr-2" />
             Add Employee
@@ -258,6 +280,44 @@ const EmployeeManagementPage: React.FC = () => {
           </div>
         )}
 
+        {resettingPasswordFor && (
+          <div className="mb-6 rounded-lg border border-amber-200 bg-amber-50 p-4">
+            <h3 className="mb-4 text-lg font-medium text-amber-800">
+              Reset Password for {resettingPasswordFor.name}
+            </h3>
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-amber-700">New Password</label>
+              <input
+                type="password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="Enter new password (minimum 4 characters)"
+                className="mt-1 block w-full rounded-md border border-amber-300 px-3 py-2 shadow-sm focus:border-amber-500 focus:outline-none focus:ring-amber-500"
+              />
+              <p className="mt-1 text-xs text-amber-600">
+                The user will be notified about this password change and must use the new password to log in.
+              </p>
+            </div>
+            <div className="flex justify-end space-x-2">
+              <button
+                onClick={cancelEdit}
+                className="flex items-center rounded-md border border-amber-300 px-4 py-2 text-sm font-medium text-amber-700 hover:bg-amber-100"
+              >
+                <X size={16} className="mr-2" />
+                Cancel
+              </button>
+              <button
+                onClick={handleResetPassword}
+                disabled={!newPassword.trim() || newPassword.length < 4}
+                className="flex items-center rounded-md bg-amber-600 px-4 py-2 text-sm font-medium text-white hover:bg-amber-700 disabled:cursor-not-allowed disabled:bg-amber-300"
+              >
+                <Key size={16} className="mr-2" />
+                Reset Password
+              </button>
+            </div>
+          </div>
+        )}
+
         {employees.length === 0 ? (
           <div className="text-center py-8">
             <p className="text-gray-500">No employees found</p>
@@ -319,15 +379,23 @@ const EmployeeManagementPage: React.FC = () => {
                           onClick={() => handleEditEmployee(employee)}
                           className="text-blue-600 hover:text-blue-900"
                           title="Edit employee"
-                          disabled={isAddingEmployee || editingEmployee !== null}
+                          disabled={isAddingEmployee || editingEmployee !== null || resettingPasswordFor !== null}
                         >
                           <Pencil size={16} />
+                        </button>
+                        <button
+                          onClick={() => setResettingPasswordFor(employee)}
+                          className="text-amber-600 hover:text-amber-900"
+                          title="Reset password"
+                          disabled={isAddingEmployee || editingEmployee !== null || resettingPasswordFor !== null}
+                        >
+                          <Key size={16} />
                         </button>
                         <button
                           onClick={() => handleDeleteEmployee(employee.id)}
                           className="text-red-600 hover:text-red-900"
                           title="Delete employee"
-                          disabled={isAddingEmployee || editingEmployee !== null}
+                          disabled={isAddingEmployee || editingEmployee !== null || resettingPasswordFor !== null}
                         >
                           <Trash2 size={16} />
                         </button>

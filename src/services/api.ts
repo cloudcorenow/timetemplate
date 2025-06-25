@@ -124,6 +124,13 @@ class ApiService {
     });
   }
 
+  async resetUserPassword(id: string, newPassword: string) {
+    return this.request(`/users/${id}/password`, {
+      method: 'PATCH',
+      body: JSON.stringify({ password: newPassword }),
+    });
+  }
+
   async getTeamMembers() {
     return this.request('/users/team');
   }
