@@ -1,6 +1,6 @@
 # TimeOff Manager Backend API
 
-This is the backend API server for the TimeOff Manager application, now using SQLite for easy setup and development.
+This is the backend API server for the TimeOff Manager application, using SQLite for easy setup and development.
 
 ## Setup Instructions
 
@@ -132,12 +132,13 @@ sqlite3 ./data/timeoff.db
 SELECT * FROM users;
 ```
 
-## Migration from MySQL
+## Integration with Frontend
 
-This version has been converted from MySQL to SQLite with the following changes:
-- Replaced `mysql2` with `sqlite3`
-- Updated SQL syntax for SQLite compatibility
-- Simplified database connection (no server required)
-- Maintained all existing functionality
+When you're ready to connect the frontend to this backend:
 
-The API endpoints and frontend remain unchanged, making this a drop-in replacement.
+1. Update the frontend's API service to use the real endpoints
+2. Replace mock authentication with real JWT tokens
+3. Update the stores to use API calls instead of localStorage
+4. Configure CORS properly for your deployment environment
+
+The API is designed to be a drop-in replacement for the current mock data system.
