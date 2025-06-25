@@ -5,11 +5,12 @@ import { serveStatic } from 'hono/cloudflare-workers'
 
 const app = new Hono()
 
-// CORS middleware
+// CORS middleware - updated for custom domain
 app.use('*', cors({
-  origin: '*',
+  origin: ['https://sapphireapp.site', 'https://www.sapphireapp.site', 'http://localhost:5173'],
   allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowHeaders: ['Content-Type', 'Authorization'],
+  credentials: true
 }))
 
 // Helper function to hash passwords (simple implementation for demo)
@@ -559,7 +560,8 @@ app.get('/health', async (c) => {
     status: 'OK', 
     timestamp: new Date().toISOString(),
     platform: 'Cloudflare Workers',
-    database: 'Cloudflare D1'
+    database: 'Cloudflare D1',
+    domain: 'sapphireapp.site'
   })
 })
 
