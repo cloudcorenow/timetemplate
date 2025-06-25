@@ -7,6 +7,8 @@ services:
       dockerfile: Dockerfile
     image: timetemplate:latest
     container_name: timetemplate
+    environment:
+      - VITE_API_URL=http://host.docker.internal:3001/api
     networks:
       mynet:
         ipv4_address: 10.0.20.1
