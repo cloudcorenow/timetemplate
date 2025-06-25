@@ -8,6 +8,7 @@ echo "🔧 Starting TimeOff Manager in Development Mode..."
 # Colors for output
 GREEN='\033[0;32m'
 BLUE='\033[0;34m'
+RED='\033[0;31m'
 NC='\033[0m'
 
 print_status() {
@@ -18,6 +19,30 @@ print_success() {
     echo -e "${GREEN}[SUCCESS]${NC} $1"
 }
 
+print_error() {
+    echo -e "${RED}[ERROR]${NC} $1"
+}
+
+# Check if backend directory exists
+if [ ! -d "backend" ]; then
+    print_error "Backend directory not found. This appears to be a frontend-only project."
+    print_status "Starting frontend development server instead..."
+    
+    # Check if frontend dependencies are installed
+    if [ ! -d "node_modules" ]; then
+        print_status "Installing frontend dependencies..."
+        npm install
+    fi
+    
+    print_status "Starting Vite development server..."
+    print_success "Server will be available at http://localhost:5173"
+    print_status "Press Ctrl+C to stop the server"
+    
+    npm run dev
+    exit 0
+fi
+
+# Original backend logic (kept for projects that do have a backend)
 # Check if backend dependencies are installed
 if [ ! -d "backend/node_modules" ]; then
     print_status "Installing backend dependencies..."
