@@ -1,33 +1,37 @@
 # Single-server full-stack Dockerfile
 FROM node:20-alpine AS builder
 
-# Install SQLite
-RUN apk add --no-cache sqlite
+# Install SQLite and other dependencies
+RUN apk add --no-cache sqlite bash curl wget
 
 WORKDIR /app
 
-# Copy and install frontend dependencies
+# Copy package files for frontend
 COPY package*.json ./
 COPY *.config.* ./
+
+# Install frontend dependencies
 RUN npm ci
 
-# Copy and build frontend
+# Copy frontend source and build
 COPY src ./src
 COPY public ./public
 COPY index.html ./
 RUN npm run build
 
-# Copy and install backend dependencies
+# Copy backend package files
 COPY backend/package*.json ./backend/
 WORKDIR /app/backend
-RUN npm ci
+RUN npm ci --only=production
 
 # Copy backend source
 COPY backend/ ./
+
+# Go back to app root
 WORKDIR /app
 
-# Create unified server
-COPY <<EOF server.js
+# Create the unified server file
+RUN cat > server.js << 'EOF'
 const express = require('express');
 const path = require('path');
 const cors = require('cors');
@@ -60,7 +64,7 @@ app.use(helmet({
 // Rate limiting
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each IP to 100 requests per windowMs
+  max: 100,
   message: 'Too many requests from this IP, please try again later.'
 });
 app.use('/api', limiter);
@@ -110,7 +114,6 @@ app.use(express.static(path.join(__dirname, 'dist'), {
 
 // SPA fallback - serve index.html for all non-API routes
 app.get('*', (req, res) => {
-  // Don't serve index.html for API routes
   if (req.path.startsWith('/api/')) {
     return res.status(404).json({ message: 'API endpoint not found' });
   }
@@ -139,12 +142,12 @@ const startServer = async () => {
     }
 
     app.listen(PORT, '0.0.0.0', () => {
-      console.log(\`🚀 TimeOff Manager running on port \${PORT}\`);
-      console.log(\`🌐 Frontend: http://localhost:\${PORT}\`);
-      console.log(\`📡 API: http://localhost:\${PORT}/api\`);
-      console.log(\`📊 Health: http://localhost:\${PORT}/health\`);
-      console.log(\`🗄️ Database: SQLite (\${process.env.DB_PATH || './backend/data/timeoff.db'})\`);
-      console.log(\`🔧 Environment: \${process.env.NODE_ENV || 'development'}\`);
+      console.log(`🚀 TimeOff Manager running on port ${PORT}`);
+      console.log(`🌐 Frontend: http://localhost:${PORT}`);
+      console.log(`📡 API: http://localhost:${PORT}/api`);
+      console.log(`📊 Health: http://localhost:${PORT}/health`);
+      console.log(`🗄️ Database: SQLite (${process.env.DB_PATH || './backend/data/timeoff.db'})`);
+      console.log(`🔧 Environment: ${process.env.NODE_ENV || 'development'}`);
     });
   } catch (error) {
     console.error('Failed to start server:', error);
@@ -173,17 +176,32 @@ RUN npm run init-db
 WORKDIR /app
 
 # Create startup script
-COPY <<EOF start.sh
+RUN cat > start.sh << 'EOF'
 #!/bin/sh
 echo "🚀 Starting TimeOff Manager..."
-echo "📊 Initializing database..."
-cd /app/backend && npm run init-db
+echo "📊 Checking database..."
+if [ ! -f "/app/backend/data/timeoff.db" ]; then
+    echo "📊 Initializing database..."
+    cd /app/backend && npm run init-db
+fi
 echo "▶️ Starting server..."
 cd /app && node server.js
 EOF
 
 RUN chmod +x start.sh
 
+# Create non-root user for security
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S nodejs -u 1001
+
+# Change ownership of app directory
+RUN chown -R nodejs:nodejs /app
+
+USER nodejs
+
 EXPOSE 3000
+
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+  CMD wget --quiet --tries=1 --spider http://localhost:3000/health || exit 1
 
 CMD ["./start.sh"]

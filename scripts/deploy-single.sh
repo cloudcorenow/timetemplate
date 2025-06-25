@@ -41,9 +41,27 @@ if ! command -v docker-compose &> /dev/null; then
     exit 1
 fi
 
+# Verify required files exist
+if [ ! -f "Dockerfile.single" ]; then
+    print_error "Dockerfile.single not found in current directory"
+    exit 1
+fi
+
+if [ ! -f "docker-compose.single.yml" ]; then
+    print_error "docker-compose.single.yml not found in current directory"
+    exit 1
+fi
+
+if [ ! -d "backend" ]; then
+    print_error "backend directory not found"
+    exit 1
+fi
+
 print_status "Building TimeOff Manager image..."
 docker build -f Dockerfile.single -t timeoff-manager:latest . || {
     print_error "Failed to build Docker image"
+    print_status "Checking build context..."
+    ls -la
     exit 1
 }
 
@@ -58,7 +76,7 @@ docker-compose -f docker-compose.single.yml up -d || {
 
 # Wait for container to be ready
 print_status "Waiting for container to be ready..."
-sleep 10
+sleep 15
 
 # Check if container is running
 if docker-compose -f docker-compose.single.yml ps | grep -q "Up"; then
@@ -70,13 +88,22 @@ else
     exit 1
 fi
 
-# Test health endpoint
+# Test health endpoint with retries
 print_status "Testing health endpoint..."
-if curl -f http://localhost:3000/health > /dev/null 2>&1; then
-    print_success "Health check passed!"
-else
-    print_warning "Health check failed, but container is running. It might still be starting up."
-fi
+for i in {1..10}; do
+    if curl -f http://localhost:3000/health > /dev/null 2>&1; then
+        print_success "Health check passed!"
+        break
+    else
+        if [ $i -eq 10 ]; then
+            print_warning "Health check failed after 10 attempts, but container is running."
+            print_status "This might be normal if the application is still starting up."
+        else
+            print_status "Health check attempt $i/10 failed, retrying in 3 seconds..."
+            sleep 3
+        fi
+    fi
+done
 
 print_success "Deployment complete!"
 echo ""
@@ -91,8 +118,8 @@ echo "   👔 Manager:  manager@example.com / password"
 echo "   🔧 Admin:    admin@example.com / password"
 echo ""
 echo "🛠️ Management Commands:"
-echo "   View logs:    docker-compose -f docker-compose.single.yml logs -f"
-echo "   Stop:         docker-compose -f docker-compose.single.yml down"
+echo "   View logs:    npm run docker:logs"
+echo "   Stop:         npm run docker:stop"
 echo "   Restart:      docker-compose -f docker-compose.single.yml restart"
 echo "   Shell access: docker exec -it timeoff-manager sh"
 echo ""
