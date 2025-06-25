@@ -1,4 +1,4 @@
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://sapphireapp.site/api';
 
 class ApiService {
   private token: string | null = null;
@@ -14,6 +14,7 @@ class ApiService {
         'Content-Type': 'application/json',
         ...(this.token && { Authorization: `Bearer ${this.token}` }),
       },
+      credentials: 'include' as RequestCredentials,
       ...options,
     };
 
@@ -23,7 +24,7 @@ class ApiService {
       // Check if response is HTML (backend not running)
       const contentType = response.headers.get('content-type');
       if (contentType && contentType.includes('text/html')) {
-        throw new Error('Backend server is not running. Please start the backend server on http://localhost:3001');
+        throw new Error('Backend server is not running. Please start the backend server.');
       }
       
       if (!response.ok) {
@@ -34,7 +35,7 @@ class ApiService {
       return response.json();
     } catch (error) {
       if (error instanceof TypeError && error.message.includes('fetch')) {
-        throw new Error('Cannot connect to backend server. Please ensure the backend is running on http://localhost:3001');
+        throw new Error('Cannot connect to backend server. Please check your connection.');
       }
       throw error;
     }
