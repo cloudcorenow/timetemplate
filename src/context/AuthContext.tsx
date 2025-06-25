@@ -1,6 +1,6 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { User } from '../types/user';
-import { mockUsers } from '../data/mockData';
+import { apiService } from '../services/api';
 
 interface AuthContextType {
   user: User | null;
@@ -32,31 +32,32 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     // Check if user is logged in from localStorage
-    const savedUser = localStorage.getItem('currentUser');
-    if (savedUser) {
-      try {
-        const parsedUser = JSON.parse(savedUser);
-        setUser(parsedUser);
-      } catch (error) {
-        localStorage.removeItem('currentUser');
-      }
+    const token = localStorage.getItem('token');
+    if (token) {
+      apiService.setToken(token);
+      // Verify token with backend
+      apiService.getCurrentUser()
+        .then(response => {
+          setUser(response.user);
+        })
+        .catch(() => {
+          // Token is invalid, remove it
+          localStorage.removeItem('token');
+          apiService.logout();
+        })
+        .finally(() => {
+          setLoading(false);
+        });
+    } else {
+      setLoading(false);
     }
-    setLoading(false);
   }, []);
 
   const login = async (email: string, password: string): Promise<boolean> => {
     try {
-      // Mock authentication - check against demo users
-      const foundUser = mockUsers.find(u => u.email === email);
-      
-      if (foundUser && password === 'password') {
-        const { password: _, ...userWithoutPassword } = foundUser;
-        setUser(userWithoutPassword as User);
-        localStorage.setItem('currentUser', JSON.stringify(userWithoutPassword));
-        return true;
-      }
-      
-      return false;
+      const response = await apiService.login(email, password);
+      setUser(response.user);
+      return true;
     } catch (error) {
       console.error('Login error:', error);
       return false;
@@ -65,20 +66,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const logout = () => {
     setUser(null);
-    localStorage.removeItem('currentUser');
+    apiService.logout();
   };
 
   const updateAvatar = async (avatarUrl: string) => {
-    if (user) {
-      const updatedUser = { ...user, avatar: avatarUrl };
-      setUser(updatedUser);
-      localStorage.setItem('currentUser', JSON.stringify(updatedUser));
-      
-      // Update in mockUsers array for persistence during session
-      const userIndex = mockUsers.findIndex(u => u.id === user.id);
-      if (userIndex !== -1) {
-        mockUsers[userIndex] = { ...mockUsers[userIndex], avatar: avatarUrl };
+    try {
+      await apiService.updateAvatar(avatarUrl);
+      if (user) {
+        setUser({ ...user, avatar: avatarUrl });
       }
+    } catch (error) {
+      console.error('Avatar update error:', error);
+      throw error;
     }
   };
 

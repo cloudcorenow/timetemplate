@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { Notification } from '../types/notification';
+import { apiService } from '../services/api';
 
 interface NotificationState {
   notifications: Notification[];
@@ -12,52 +13,6 @@ interface NotificationState {
   markAllAsRead: () => Promise<void>;
 }
 
-// Mock notifications data
-const mockNotifications: Notification[] = [
-  {
-    id: 'notif1',
-    type: 'success',
-    message: 'Your time off request for Feb 15-17 has been approved',
-    read: false,
-    createdAt: new Date('2025-01-10T10:00:00')
-  },
-  {
-    id: 'notif2',
-    type: 'info',
-    message: 'Your sick leave request is pending manager approval',
-    read: false,
-    createdAt: new Date('2025-01-12T14:35:00')
-  },
-  {
-    id: 'notif3',
-    type: 'info',
-    message: 'Your time off request for March 1-5 is pending approval',
-    read: false,
-    createdAt: new Date('2025-01-13T11:20:00')
-  },
-  {
-    id: 'notif4',
-    type: 'success',
-    message: 'Your time edit request has been approved',
-    read: true,
-    createdAt: new Date('2025-01-09T09:00:00')
-  },
-  {
-    id: 'notif5',
-    type: 'error',
-    message: 'Your time off request has been rejected',
-    read: false,
-    createdAt: new Date('2025-01-11T17:00:00')
-  },
-  {
-    id: 'notif6',
-    type: 'info',
-    message: 'You have 2 pending requests to review',
-    read: false,
-    createdAt: new Date('2025-01-13T12:00:00')
-  }
-];
-
 export const useNotificationStore = create<NotificationState>((set, get) => ({
   notifications: [],
   unreadCount: 0,
@@ -66,12 +21,17 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
   fetchNotifications: async () => {
     set({ isLoading: true });
     try {
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 300));
+      const notifications = await apiService.getNotifications();
+      
+      // Transform API response to match frontend types
+      const transformedNotifications = notifications.map((notification: any) => ({
+        ...notification,
+        createdAt: new Date(notification.createdAt)
+      }));
       
       set({ 
-        notifications: [...mockNotifications],
-        unreadCount: mockNotifications.filter(n => !n.read).length,
+        notifications: transformedNotifications,
+        unreadCount: transformedNotifications.filter((n: Notification) => !n.read).length,
         isLoading: false 
       });
     } catch (error) {
@@ -82,14 +42,15 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
 
   fetchUnreadCount: async () => {
     try {
-      const unreadCount = mockNotifications.filter(n => !n.read).length;
-      set({ unreadCount });
+      const response = await apiService.getUnreadCount();
+      set({ unreadCount: response.count });
     } catch (error) {
       console.error('Error fetching unread count:', error);
     }
   },
   
   addNotification: (notification) => {
+    // This is for local notifications only
     set((state) => {
       const newNotification: Notification = {
         id: Math.random().toString(36).substring(2, 9),
@@ -97,9 +58,6 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
         read: false,
         createdAt: new Date()
       };
-      
-      // Add to mock data
-      mockNotifications.unshift(newNotification);
       
       return {
         notifications: [newNotification, ...state.notifications],
@@ -110,11 +68,7 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
   
   markAsRead: async (id) => {
     try {
-      // Update in mock data
-      const notificationIndex = mockNotifications.findIndex(n => n.id === id);
-      if (notificationIndex !== -1) {
-        mockNotifications[notificationIndex].read = true;
-      }
+      await apiService.markNotificationAsRead(id);
       
       set((state) => {
         const notifications = state.notifications.map(notification =>
@@ -133,8 +87,7 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
   
   markAllAsRead: async () => {
     try {
-      // Update in mock data
-      mockNotifications.forEach(n => n.read = true);
+      await apiService.markAllNotificationsAsRead();
       
       set((state) => ({
         notifications: state.notifications.map(n => ({ ...n, read: true })),
