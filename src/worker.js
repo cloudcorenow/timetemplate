@@ -26,6 +26,11 @@ async function verifyPassword(password, hash) {
   return hashedInput === hash
 }
 
+// JWT secret - Use environment variable for security
+const getJWTSecret = (c) => {
+  return c.env.JWT_SECRET || 'development-fallback-secret-change-in-production'
+}
+
 // Database initialization
 async function initDatabase(db) {
   try {
@@ -77,7 +82,7 @@ async function initDatabase(db) {
       )
     `)
 
-    // Insert sample users if they don't exist
+    // Check if users already exist
     const existingUsers = await db.prepare('SELECT COUNT(*) as count FROM users').first()
     
     if (existingUsers.count === 0) {
@@ -150,11 +155,6 @@ async function initDatabase(db) {
   } catch (error) {
     console.error('Database initialization error:', error)
   }
-}
-
-// JWT secret - Use environment variable for security
-const getJWTSecret = (c) => {
-  return c.env.JWT_SECRET || 'development-fallback-secret-change-in-production'
 }
 
 // Auth middleware
@@ -574,23 +574,8 @@ app.get('*', async (c) => {
     return c.json({ message: 'API endpoint not found' }, 404)
   }
   
-  // Return the built index.html
-  return c.html(`<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>TimeOff Manager - Employee Time Off Request System</title>
-    <script type="module" crossorigin src="/assets/index-cNKgz9bw.js"></script>
-    <link rel="modulepreload" crossorigin href="/assets/vendor-CRu2tH9_.js">
-    <link rel="modulepreload" crossorigin href="/assets/utils-7EvkFMx6.js">
-    <link rel="stylesheet" crossorigin href="/assets/index-x30_xaIR.css">
-  </head>
-  <body>
-    <div id="root"></div>
-  </body>
-</html>`)
+  // Return the built index.html for SPA routing
+  return serveStatic({ path: './index.html' })(c)
 })
 
 export default app
