@@ -1,0 +1,9 @@
+name = "timeoff-manager"
+compatibility_date = "2025-06-25"
+
+[env.production]
+name = "timeoff-manager"
+
+# Static site configuration for Cloudflare Pages
+[site]
+bucket = "./dist"

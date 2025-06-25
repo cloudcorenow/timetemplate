@@ -11,6 +11,8 @@
     "preview": "vite preview",
     "deploy:single": "bash scripts/deploy-single.sh",
     "deploy:fullstack": "bash scripts/deploy-fullstack.sh",
+    "deploy:cloudflare": "bash scripts/deploy-cloudflare.sh",
+    "deploy:railway": "bash scripts/deploy-railway.sh",
     "docker:build": "docker build -f Dockerfile.single -t timeoff-manager:latest .",
     "docker:run": "docker run -p 3000:3000 timeoff-manager:latest",
     "docker:compose": "docker-compose -f docker-compose.single.yml up -d",
