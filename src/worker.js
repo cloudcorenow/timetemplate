@@ -7,7 +7,7 @@ const app = new Hono()
 
 // CORS middleware - updated for custom domain
 app.use('*', cors({
-  origin: ['https://sapphireapp.site', 'https://www.sapphireapp.site', 'http://localhost:5173'],
+  origin: ['https://sapphireapp.site', 'https://www.sapphireapp.site', 'http://localhost:5173', 'https://timeoff-manager.lamado.workers.dev'],
   allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowHeaders: ['Content-Type', 'Authorization'],
   credentials: true
@@ -16,7 +16,7 @@ app.use('*', cors({
 // Helper function to hash passwords (simple implementation for demo)
 async function hashPassword(password) {
   const encoder = new TextEncoder()
-  const data = encoder.encode(password + 'salt')
+  const data = encoder.encode(password + 'timeoff-salt-2025')
   const hashBuffer = await crypto.subtle.digest('SHA-256', data)
   const hashArray = Array.from(new Uint8Array(hashBuffer))
   return hashArray.map(b => b.toString(16).padStart(2, '0')).join('')
@@ -150,6 +150,15 @@ async function initDatabase(db) {
           VALUES (?, ?, ?, ?, ?)
         `).bind(...notification).run()
       }
+    } else {
+      // Update existing users with correct password hash if needed
+      const hashedPassword = await hashPassword('password')
+      await db.prepare(`
+        UPDATE users SET password = ? WHERE email IN (
+          'employee@example.com', 'manager@example.com', 'admin@example.com',
+          'alice@example.com', 'bob@example.com', 'sarah@example.com', 'mike@example.com'
+        )
+      `).bind(hashedPassword).run()
     }
   } catch (error) {
     console.error('Database initialization error:', error)
