@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { TimeOffRequest, RequestStatus } from '../types/request';
 import { User } from '../types/user';
-import { apiService } from '../services/api';
+import { mockRequests } from '../data/mockData';
 
 interface RequestState {
   requests: TimeOffRequest[];
@@ -20,40 +20,46 @@ export const useRequestStore = create<RequestState>((set, get) => ({
   fetchRequests: async () => {
     set({ isLoading: true, error: null });
     try {
-      const requests = await apiService.getRequests();
+      // For demo purposes, use mock data since backend might not be available
+      const savedRequests = localStorage.getItem('timeoff_requests');
+      const requests = savedRequests ? JSON.parse(savedRequests) : mockRequests;
       
-      // Transform API response to match frontend types
-      const transformedRequests = requests.map((request: any) => ({
-        ...request,
-        startDate: new Date(request.startDate),
-        endDate: new Date(request.endDate),
-        createdAt: new Date(request.createdAt),
-        updatedAt: new Date(request.updatedAt)
-      }));
-      
-      set({ requests: transformedRequests, isLoading: false });
+      set({ requests, isLoading: false });
     } catch (error) {
       console.error('Error fetching requests:', error);
-      set({ error: 'Failed to fetch requests', isLoading: false });
+      // Fallback to mock data
+      set({ requests: mockRequests, isLoading: false });
     }
   },
 
   addRequest: async (requestData) => {
     set({ isLoading: true, error: null });
     try {
-      await apiService.createRequest({
-        startDate: requestData.startDate.toISOString().split('T')[0],
-        endDate: requestData.endDate.toISOString().split('T')[0],
+      const newRequest: TimeOffRequest = {
+        id: Math.random().toString(36).substring(2, 9),
+        employee: requestData.employee,
+        startDate: requestData.startDate,
+        endDate: requestData.endDate,
         type: requestData.type,
         reason: requestData.reason,
-        originalClockIn: requestData.originalClockIn,
-        originalClockOut: requestData.originalClockOut,
-        requestedClockIn: requestData.requestedClockIn,
-        requestedClockOut: requestData.requestedClockOut
-      });
+        status: 'pending',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        ...(requestData.originalClockIn && {
+          originalClockIn: requestData.originalClockIn,
+          originalClockOut: requestData.originalClockOut,
+          requestedClockIn: requestData.requestedClockIn,
+          requestedClockOut: requestData.requestedClockOut
+        })
+      };
+
+      const currentRequests = get().requests;
+      const updatedRequests = [newRequest, ...currentRequests];
       
-      // Refresh the requests list
-      await get().fetchRequests();
+      // Save to localStorage
+      localStorage.setItem('timeoff_requests', JSON.stringify(updatedRequests));
+      
+      set({ requests: updatedRequests, isLoading: false });
     } catch (error) {
       console.error('Error adding request:', error);
       set({ error: 'Failed to create request', isLoading: false });
@@ -64,10 +70,24 @@ export const useRequestStore = create<RequestState>((set, get) => ({
   updateRequestStatus: async (id, status, manager, rejectionReason) => {
     set({ isLoading: true, error: null });
     try {
-      await apiService.updateRequestStatus(id, status, rejectionReason);
+      const currentRequests = get().requests;
+      const updatedRequests = currentRequests.map(request => {
+        if (request.id === id) {
+          return {
+            ...request,
+            status,
+            approvedBy: manager,
+            rejectionReason,
+            updatedAt: new Date()
+          };
+        }
+        return request;
+      });
+
+      // Save to localStorage
+      localStorage.setItem('timeoff_requests', JSON.stringify(updatedRequests));
       
-      // Refresh the requests list
-      await get().fetchRequests();
+      set({ requests: updatedRequests, isLoading: false });
     } catch (error) {
       console.error('Error updating request status:', error);
       set({ error: 'Failed to update request status', isLoading: false });

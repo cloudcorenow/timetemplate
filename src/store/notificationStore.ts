@@ -1,6 +1,5 @@
 import { create } from 'zustand';
 import { Notification } from '../types/notification';
-import { apiService } from '../services/api';
 
 interface NotificationState {
   notifications: Notification[];
@@ -21,9 +20,19 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
   fetchNotifications: async () => {
     set({ isLoading: true });
     try {
-      const notifications = await apiService.getNotifications();
+      // For demo purposes, use localStorage since backend might not be available
+      const savedNotifications = localStorage.getItem('timeoff_notifications');
+      const notifications = savedNotifications ? JSON.parse(savedNotifications) : [
+        {
+          id: 'notif1',
+          type: 'success',
+          message: 'Welcome to TimeOff Manager! Your demo account is ready.',
+          read: false,
+          createdAt: new Date().toISOString()
+        }
+      ];
       
-      // Transform API response to match frontend types
+      // Transform dates
       const transformedNotifications = notifications.map((notification: any) => ({
         ...notification,
         createdAt: new Date(notification.createdAt)
@@ -42,15 +51,15 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
 
   fetchUnreadCount: async () => {
     try {
-      const response = await apiService.getUnreadCount();
-      set({ unreadCount: response.count });
+      const notifications = get().notifications;
+      const unreadCount = notifications.filter(n => !n.read).length;
+      set({ unreadCount });
     } catch (error) {
       console.error('Error fetching unread count:', error);
     }
   },
   
   addNotification: (notification) => {
-    // This is for local notifications only
     set((state) => {
       const newNotification: Notification = {
         id: Math.random().toString(36).substring(2, 9),
@@ -59,8 +68,13 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
         createdAt: new Date()
       };
       
+      const updatedNotifications = [newNotification, ...state.notifications];
+      
+      // Save to localStorage
+      localStorage.setItem('timeoff_notifications', JSON.stringify(updatedNotifications));
+      
       return {
-        notifications: [newNotification, ...state.notifications],
+        notifications: updatedNotifications,
         unreadCount: state.unreadCount + 1
       };
     });
@@ -68,12 +82,13 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
   
   markAsRead: async (id) => {
     try {
-      await apiService.markNotificationAsRead(id);
-      
       set((state) => {
         const notifications = state.notifications.map(notification =>
           notification.id === id ? { ...notification, read: true } : notification
         );
+        
+        // Save to localStorage
+        localStorage.setItem('timeoff_notifications', JSON.stringify(notifications));
         
         return {
           notifications,
@@ -87,12 +102,17 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
   
   markAllAsRead: async () => {
     try {
-      await apiService.markAllNotificationsAsRead();
-      
-      set((state) => ({
-        notifications: state.notifications.map(n => ({ ...n, read: true })),
-        unreadCount: 0
-      }));
+      set((state) => {
+        const notifications = state.notifications.map(n => ({ ...n, read: true }));
+        
+        // Save to localStorage
+        localStorage.setItem('timeoff_notifications', JSON.stringify(notifications));
+        
+        return {
+          notifications,
+          unreadCount: 0
+        };
+      });
     } catch (error) {
       console.error('Error marking all notifications as read:', error);
     }
