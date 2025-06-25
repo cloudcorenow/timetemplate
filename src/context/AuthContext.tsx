@@ -40,6 +40,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const parsedUser = JSON.parse(savedUser);
         setUser(parsedUser);
         apiService.setToken(token);
+        
+        // Verify token is still valid by fetching current user
+        apiService.getCurrentUser()
+          .then(response => {
+            setUser(response.user);
+            localStorage.setItem('currentUser', JSON.stringify(response.user));
+          })
+          .catch(() => {
+            // Token is invalid, clear storage
+            localStorage.removeItem('currentUser');
+            localStorage.removeItem('token');
+            setUser(null);
+            apiService.logout();
+          });
       } catch (error) {
         console.error('Error parsing saved user:', error);
         localStorage.removeItem('currentUser');
@@ -51,56 +65,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const login = async (email: string, password: string): Promise<boolean> => {
     try {
-      // For demo purposes, we'll use mock authentication since the backend might not be running
-      const mockUsers = [
-        {
-          id: '1',
-          name: 'Juan Carranza',
-          email: 'employee@example.com',
-          role: 'employee' as const,
-          department: 'Engineering',
-          avatar: 'https://images.pexels.com/photos/2379004/pexels-photo-2379004.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1'
-        },
-        {
-          id: '2',
-          name: 'Ana Ramirez',
-          email: 'manager@example.com',
-          role: 'manager' as const,
-          department: 'Engineering',
-          avatar: 'https://images.pexels.com/photos/774909/pexels-photo-774909.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1'
-        },
-        {
-          id: '5',
-          name: 'Admin User',
-          email: 'admin@example.com',
-          role: 'admin' as const,
-          department: 'IT',
-          avatar: 'https://images.pexels.com/photos/614810/pexels-photo-614810.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1'
-        }
-      ];
-
-      // Find user in mock data
-      const foundUser = mockUsers.find(u => u.email.toLowerCase() === email.toLowerCase());
-      
-      if (!foundUser) {
-        console.log('User not found for email:', email);
-        return false;
-      }
-
-      // For demo purposes, accept 'password' as the password for all users
-      if (password !== 'password') {
-        console.log('Invalid password. Use "password" for demo accounts.');
-        return false;
-      }
-
-      // Create a mock token for demo purposes
-      const mockToken = `demo-token-${foundUser.id}-${Date.now()}`;
-      
-      setUser(foundUser);
-      localStorage.setItem('currentUser', JSON.stringify(foundUser));
-      localStorage.setItem('token', mockToken);
-      apiService.setToken(mockToken);
-      
+      const response = await apiService.login(email, password);
+      setUser(response.user);
+      localStorage.setItem('currentUser', JSON.stringify(response.user));
       return true;
     } catch (error) {
       console.error('Login error:', error);
@@ -117,15 +84,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const updateAvatar = async (avatarUrl: string) => {
     if (user) {
-      const updatedUser = { ...user, avatar: avatarUrl };
-      setUser(updatedUser);
-      localStorage.setItem('currentUser', JSON.stringify(updatedUser));
-      
-      // Try to update via API, but don't fail if backend is not available
       try {
         await apiService.updateAvatar(avatarUrl);
+        const updatedUser = { ...user, avatar: avatarUrl };
+        setUser(updatedUser);
+        localStorage.setItem('currentUser', JSON.stringify(updatedUser));
       } catch (error) {
-        console.log('Backend not available, avatar updated locally only');
+        console.error('Failed to update avatar:', error);
+        throw error;
       }
     }
   };
