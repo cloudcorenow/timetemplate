@@ -151,7 +151,7 @@ async function initDatabase(db) {
         `).bind(...notification).run()
       }
     } else {
-      // Update existing users with correct password hash if needed
+      // Always update passwords to ensure they match our current hashing
       const hashedPassword = await hashPassword('password')
       await db.prepare(`
         UPDATE users SET password = ? WHERE email IN (
@@ -209,25 +209,32 @@ app.post('/api/auth/login', async (c) => {
       return c.json({ message: 'Email and password are required' }, 400)
     }
 
+    console.log('Login attempt for:', email)
+
     const user = await c.env.DB.prepare(
       'SELECT * FROM users WHERE email = ?'
     ).bind(email.toLowerCase()).first()
 
     if (!user) {
+      console.log('User not found:', email)
       return c.json({ message: 'Invalid credentials' }, 401)
     }
 
+    console.log('User found, verifying password...')
     const isValidPassword = await verifyPassword(password, user.password)
     if (!isValidPassword) {
+      console.log('Password verification failed for:', email)
       return c.json({ message: 'Invalid credentials' }, 401)
     }
 
+    console.log('Password verified, generating token...')
     // Generate JWT token
     const token = await sign({ userId: user.id }, JWT_SECRET)
 
     // Remove password from response
     const { password: _, ...userWithoutPassword } = user
 
+    console.log('Login successful for:', email)
     return c.json({
       user: userWithoutPassword,
       token
@@ -572,6 +579,16 @@ app.get('/health', async (c) => {
     database: 'Cloudflare D1',
     domain: 'timeoff-manager.lamado.workers.dev'
   })
+})
+
+// Debug endpoint to check users
+app.get('/api/debug/users', async (c) => {
+  try {
+    const result = await c.env.DB.prepare('SELECT email, role FROM users').all()
+    return c.json(result.results)
+  } catch (error) {
+    return c.json({ error: error.message }, 500)
+  }
 })
 
 // Serve static files from the dist directory
