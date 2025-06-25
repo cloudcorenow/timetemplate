@@ -23,9 +23,16 @@ const TeamOverviewPage: React.FC = () => {
           data = await apiService.getUsers();
           setEmployees(data.filter((emp: User) => emp.role !== 'admin'));
         } else {
-          // Manager gets team members from their department
-          data = await apiService.getTeamMembers();
-          setEmployees(data);
+          // All other users (managers and employees) get all team members
+          // This gives everyone visibility into the organization
+          try {
+            data = await apiService.getUsers();
+            setEmployees(data.filter((emp: User) => emp.role !== 'admin'));
+          } catch (adminError) {
+            // If they don't have admin access, try team members endpoint
+            data = await apiService.getTeamMembers();
+            setEmployees(data);
+          }
         }
       } catch (error) {
         console.error('Error fetching employees:', error);
@@ -38,17 +45,15 @@ const TeamOverviewPage: React.FC = () => {
     fetchEmployees();
   }, [isAdmin]);
 
-  // Group employees by department for admin view
-  const groupedEmployees = isAdmin 
-    ? employees.reduce((acc, employee) => {
-        const dept = employee.department;
-        if (!acc[dept]) {
-          acc[dept] = [];
-        }
-        acc[dept].push(employee);
-        return acc;
-      }, {} as Record<string, User[]>)
-    : { [user?.department || '']: employees };
+  // Group employees by department
+  const groupedEmployees = employees.reduce((acc, employee) => {
+    const dept = employee.department;
+    if (!acc[dept]) {
+      acc[dept] = [];
+    }
+    acc[dept].push(employee);
+    return acc;
+  }, {} as Record<string, User[]>);
 
   const departments = Object.keys(groupedEmployees).filter(dept => dept && groupedEmployees[dept].length > 0);
 
@@ -84,7 +89,7 @@ const TeamOverviewPage: React.FC = () => {
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-800">Team Overview</h1>
         <p className="mt-1 text-gray-600">
-          {isAdmin ? 'View all employees across departments' : 'Manage and view your team members'}
+          View all team members across departments
         </p>
       </div>
 

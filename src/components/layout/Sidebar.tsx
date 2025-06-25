@@ -87,28 +87,23 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, closeSidebar }) => {
           New Request
         </NavLink>
 
-        {(isManager || isAdmin) && (
-          <div className="pt-5">
-            <p className="mb-2 px-4 text-xs font-semibold uppercase tracking-wider text-blue-300">
-              Manager Controls
-            </p>
-            <NavLink 
-              to="/team" 
-              className={({ isActive }) => 
-                `flex items-center rounded-md px-4 py-2 text-base font-medium transition-colors duration-150 ${
-                  isActive 
-                    ? 'bg-blue-800 text-white' 
-                    : 'text-blue-100 hover:bg-blue-600'
-                }`
-              }
-              onClick={() => closeSidebar()}
-            >
-              <UserCircle size={20} className="mr-3" />
-              Team Overview
-            </NavLink>
-          </div>
-        )}
+        {/* Team Overview - Available to ALL users */}
+        <NavLink 
+          to="/team" 
+          className={({ isActive }) => 
+            `flex items-center rounded-md px-4 py-2 text-base font-medium transition-colors duration-150 ${
+              isActive 
+                ? 'bg-blue-800 text-white' 
+                : 'text-blue-100 hover:bg-blue-600'
+            }`
+          }
+          onClick={() => closeSidebar()}
+        >
+          <UserCircle size={20} className="mr-3" />
+          Team Overview
+        </NavLink>
 
+        {/* Admin-only section */}
         {user?.role === 'admin' && (
           <div className="pt-5">
             <p className="mb-2 px-4 text-xs font-semibold uppercase tracking-wider text-blue-300">
