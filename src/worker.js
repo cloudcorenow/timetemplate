@@ -152,8 +152,10 @@ async function initDatabase(db) {
   }
 }
 
-// JWT secret - in production, set this as a secret
-const JWT_SECRET = 'your-jwt-secret-key-change-in-production'
+// JWT secret - Use environment variable for security
+const getJWTSecret = (c) => {
+  return c.env.JWT_SECRET || 'development-fallback-secret-change-in-production'
+}
 
 // Auth middleware
 const authMiddleware = async (c, next) => {
@@ -164,7 +166,7 @@ const authMiddleware = async (c, next) => {
     }
 
     const token = authHeader.split(' ')[1]
-    const payload = await verify(token, JWT_SECRET)
+    const payload = await verify(token, getJWTSecret(c))
     
     // Get user from database
     const user = await c.env.DB.prepare(
@@ -212,8 +214,8 @@ app.post('/api/auth/login', async (c) => {
       return c.json({ message: 'Invalid credentials' }, 401)
     }
 
-    // Generate JWT token
-    const token = await sign({ userId: user.id }, JWT_SECRET)
+    // Generate JWT token using environment secret
+    const token = await sign({ userId: user.id }, getJWTSecret(c))
 
     // Remove password from response
     const { password: _, ...userWithoutPassword } = user
