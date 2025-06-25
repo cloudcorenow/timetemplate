@@ -12,11 +12,13 @@ const EmployeeManagementPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isAddingEmployee, setIsAddingEmployee] = useState(false);
+  const [editingEmployee, setEditingEmployee] = useState<User | null>(null);
   const [newEmployee, setNewEmployee] = useState({
     name: '',
     email: '',
     department: departments[0],
-    role: 'employee' as const
+    role: 'employee' as const,
+    avatar: ''
   });
 
   // Fetch employees from the database
@@ -43,37 +45,90 @@ const EmployeeManagementPage: React.FC = () => {
 
   const handleAddEmployee = async () => {
     try {
-      // In a real implementation, you would call an API to create the employee
-      // For now, we'll just add it to the local state
-      const employee: User = {
-        id: Math.random().toString(36).substring(2, 9),
-        ...newEmployee,
-        password: 'password' // Default password
-      };
+      await apiService.createUser(newEmployee);
       
-      setEmployees([...employees, employee]);
+      // Refresh the employee list
+      const users = await apiService.getUsers();
+      setEmployees(users.filter((u: User) => u.role !== 'admin'));
+      
       setIsAddingEmployee(false);
       setNewEmployee({
         name: '',
         email: '',
         department: departments[0],
-        role: 'employee'
+        role: 'employee',
+        avatar: ''
       });
-    } catch (error) {
+      setError(null);
+    } catch (error: any) {
       console.error('Error adding employee:', error);
-      setError('Failed to add employee');
+      setError(error.message || 'Failed to add employee');
+    }
+  };
+
+  const handleEditEmployee = (employee: User) => {
+    setEditingEmployee(employee);
+    setNewEmployee({
+      name: employee.name,
+      email: employee.email,
+      department: employee.department,
+      role: employee.role,
+      avatar: employee.avatar || ''
+    });
+  };
+
+  const handleUpdateEmployee = async () => {
+    if (!editingEmployee) return;
+
+    try {
+      await apiService.updateUser(editingEmployee.id, newEmployee);
+      
+      // Refresh the employee list
+      const users = await apiService.getUsers();
+      setEmployees(users.filter((u: User) => u.role !== 'admin'));
+      
+      setEditingEmployee(null);
+      setNewEmployee({
+        name: '',
+        email: '',
+        department: departments[0],
+        role: 'employee',
+        avatar: ''
+      });
+      setError(null);
+    } catch (error: any) {
+      console.error('Error updating employee:', error);
+      setError(error.message || 'Failed to update employee');
     }
   };
 
   const handleDeleteEmployee = async (id: string) => {
-    try {
-      // In a real implementation, you would call an API to delete the employee
-      // For now, we'll just remove it from the local state
-      setEmployees(employees.filter(emp => emp.id !== id));
-    } catch (error) {
-      console.error('Error deleting employee:', error);
-      setError('Failed to delete employee');
+    if (!confirm('Are you sure you want to delete this employee? This action cannot be undone.')) {
+      return;
     }
+
+    try {
+      await apiService.deleteUser(id);
+      
+      // Remove from local state
+      setEmployees(employees.filter(emp => emp.id !== id));
+      setError(null);
+    } catch (error: any) {
+      console.error('Error deleting employee:', error);
+      setError(error.message || 'Failed to delete employee');
+    }
+  };
+
+  const cancelEdit = () => {
+    setEditingEmployee(null);
+    setIsAddingEmployee(false);
+    setNewEmployee({
+      name: '',
+      email: '',
+      department: departments[0],
+      role: 'employee',
+      avatar: ''
+    });
   };
 
   if (user?.role !== 'admin') {
@@ -118,15 +173,18 @@ const EmployeeManagementPage: React.FC = () => {
           <button
             onClick={() => setIsAddingEmployee(true)}
             className="flex items-center rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+            disabled={editingEmployee !== null}
           >
             <UserPlus size={16} className="mr-2" />
             Add Employee
           </button>
         </div>
 
-        {isAddingEmployee && (
+        {(isAddingEmployee || editingEmployee) && (
           <div className="mb-6 rounded-lg border border-gray-200 p-4">
-            <h3 className="mb-4 text-lg font-medium text-gray-700">New Employee</h3>
+            <h3 className="mb-4 text-lg font-medium text-gray-700">
+              {editingEmployee ? 'Edit Employee' : 'New Employee'}
+            </h3>
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
                 <label className="block text-sm font-medium text-gray-700">Name</label>
@@ -169,22 +227,32 @@ const EmployeeManagementPage: React.FC = () => {
                   <option value="manager">Manager</option>
                 </select>
               </div>
+              <div className="sm:col-span-2">
+                <label className="block text-sm font-medium text-gray-700">Avatar URL (optional)</label>
+                <input
+                  type="url"
+                  value={newEmployee.avatar}
+                  onChange={(e) => setNewEmployee({ ...newEmployee, avatar: e.target.value })}
+                  placeholder="https://example.com/avatar.jpg"
+                  className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500"
+                />
+              </div>
             </div>
             <div className="mt-4 flex justify-end space-x-2">
               <button
-                onClick={() => setIsAddingEmployee(false)}
+                onClick={cancelEdit}
                 className="flex items-center rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
               >
                 <X size={16} className="mr-2" />
                 Cancel
               </button>
               <button
-                onClick={handleAddEmployee}
+                onClick={editingEmployee ? handleUpdateEmployee : handleAddEmployee}
                 disabled={!newEmployee.name || !newEmployee.email}
                 className="flex items-center rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-300"
               >
                 <Check size={16} className="mr-2" />
-                Save
+                {editingEmployee ? 'Update' : 'Save'}
               </button>
             </div>
           </div>
@@ -248,8 +316,10 @@ const EmployeeManagementPage: React.FC = () => {
                     <td className="whitespace-nowrap px-6 py-4 text-right text-sm font-medium">
                       <div className="flex items-center space-x-2">
                         <button
+                          onClick={() => handleEditEmployee(employee)}
                           className="text-blue-600 hover:text-blue-900"
                           title="Edit employee"
+                          disabled={isAddingEmployee || editingEmployee !== null}
                         >
                           <Pencil size={16} />
                         </button>
@@ -257,6 +327,7 @@ const EmployeeManagementPage: React.FC = () => {
                           onClick={() => handleDeleteEmployee(employee.id)}
                           className="text-red-600 hover:text-red-900"
                           title="Delete employee"
+                          disabled={isAddingEmployee || editingEmployee !== null}
                         >
                           <Trash2 size={16} />
                         </button>

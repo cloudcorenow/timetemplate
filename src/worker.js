@@ -196,6 +196,15 @@ const authMiddleware = async (c, next) => {
   }
 }
 
+// Admin middleware
+const adminMiddleware = async (c, next) => {
+  const user = c.get('user')
+  if (user.role !== 'admin') {
+    return c.json({ message: 'Admin access required' }, 403)
+  }
+  await next()
+}
+
 // Initialize database middleware
 app.use('*', async (c, next) => {
   if (c.env.DB) {
@@ -537,14 +546,8 @@ app.get('/api/notifications/unread-count', authMiddleware, async (c) => {
 })
 
 // Users routes
-app.get('/api/users', authMiddleware, async (c) => {
+app.get('/api/users', authMiddleware, adminMiddleware, async (c) => {
   try {
-    const user = c.get('user')
-    
-    if (user.role !== 'admin') {
-      return c.json({ message: 'Insufficient permissions' }, 403)
-    }
-
     const result = await c.env.DB.prepare(
       'SELECT id, name, email, role, department, avatar, created_at FROM users ORDER BY name'
     ).all()
@@ -553,6 +556,129 @@ app.get('/api/users', authMiddleware, async (c) => {
   } catch (error) {
     console.error('Get users error:', error)
     return c.json({ message: 'Failed to fetch users' }, 500)
+  }
+})
+
+// Create new user
+app.post('/api/users', authMiddleware, adminMiddleware, async (c) => {
+  try {
+    const { name, email, role, department, avatar } = await c.req.json()
+
+    if (!name || !email || !role || !department) {
+      return c.json({ message: 'Missing required fields' }, 400)
+    }
+
+    // Check if email already exists
+    const existingUser = await c.env.DB.prepare(
+      'SELECT id FROM users WHERE email = ?'
+    ).bind(email.toLowerCase()).first()
+
+    if (existingUser) {
+      return c.json({ message: 'Email already exists' }, 400)
+    }
+
+    const userId = crypto.randomUUID()
+
+    await c.env.DB.prepare(`
+      INSERT INTO users (id, name, email, password, role, department, avatar)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `).bind(
+      userId,
+      name,
+      email.toLowerCase(),
+      'password', // Default password
+      role,
+      department,
+      avatar || null
+    ).run()
+
+    return c.json({ message: 'User created successfully', id: userId }, 201)
+  } catch (error) {
+    console.error('Create user error:', error)
+    return c.json({ message: 'Failed to create user' }, 500)
+  }
+})
+
+// Update user
+app.put('/api/users/:id', authMiddleware, adminMiddleware, async (c) => {
+  try {
+    const { id } = c.req.param()
+    const { name, email, role, department, avatar } = await c.req.json()
+
+    if (!name || !email || !role || !department) {
+      return c.json({ message: 'Missing required fields' }, 400)
+    }
+
+    // Check if user exists
+    const existingUser = await c.env.DB.prepare(
+      'SELECT id FROM users WHERE id = ?'
+    ).bind(id).first()
+
+    if (!existingUser) {
+      return c.json({ message: 'User not found' }, 404)
+    }
+
+    // Check if email is taken by another user
+    const emailCheck = await c.env.DB.prepare(
+      'SELECT id FROM users WHERE email = ? AND id != ?'
+    ).bind(email.toLowerCase(), id).first()
+
+    if (emailCheck) {
+      return c.json({ message: 'Email already exists' }, 400)
+    }
+
+    await c.env.DB.prepare(`
+      UPDATE users 
+      SET name = ?, email = ?, role = ?, department = ?, avatar = ?, updated_at = CURRENT_TIMESTAMP
+      WHERE id = ?
+    `).bind(
+      name,
+      email.toLowerCase(),
+      role,
+      department,
+      avatar || null,
+      id
+    ).run()
+
+    return c.json({ message: 'User updated successfully' })
+  } catch (error) {
+    console.error('Update user error:', error)
+    return c.json({ message: 'Failed to update user' }, 500)
+  }
+})
+
+// Delete user
+app.delete('/api/users/:id', authMiddleware, adminMiddleware, async (c) => {
+  try {
+    const { id } = c.req.param()
+    const currentUser = c.get('user')
+
+    // Prevent admin from deleting themselves
+    if (id === currentUser.id) {
+      return c.json({ message: 'Cannot delete your own account' }, 400)
+    }
+
+    // Check if user exists
+    const existingUser = await c.env.DB.prepare(
+      'SELECT id, role FROM users WHERE id = ?'
+    ).bind(id).first()
+
+    if (!existingUser) {
+      return c.json({ message: 'User not found' }, 404)
+    }
+
+    // Prevent deleting other admin users
+    if (existingUser.role === 'admin') {
+      return c.json({ message: 'Cannot delete admin users' }, 400)
+    }
+
+    // Delete user (this will cascade delete related requests and notifications due to foreign keys)
+    await c.env.DB.prepare('DELETE FROM users WHERE id = ?').bind(id).run()
+
+    return c.json({ message: 'User deleted successfully' })
+  } catch (error) {
+    console.error('Delete user error:', error)
+    return c.json({ message: 'Failed to delete user' }, 500)
   }
 })
 
