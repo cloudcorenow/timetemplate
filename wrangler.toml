@@ -26,6 +26,6 @@ name = "timeoff-manager-prod"
 [env.staging]
 name = "timeoff-manager-staging"
 
-[[assets]]
-binding = "ASSETS"
+# Static assets configuration - FIXED
+[assets]
 directory = "./dist"
