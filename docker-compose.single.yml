@@ -1,0 +1,46 @@
+version: '3.8'
+
+services:
+  timeoff-manager:
+    build:
+      context: .
+      dockerfile: Dockerfile.single
+    image: timeoff-manager:latest
+    container_name: timeoff-manager
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - JWT_SECRET=your_super_secret_jwt_key_change_this_in_production
+      - DB_PATH=/app/backend/data/timeoff.db
+      - FRONTEND_URL=http://localhost:3000
+    volumes:
+      # Persist database
+      - timeoff_data:/app/backend/data
+      # Optional: persist logs
+      - timeoff_logs:/app/logs
+    networks:
+      - timeoff_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  timeoff_data:
+    driver: local
+  timeoff_logs:
+    driver: local
+
+networks:
+  timeoff_network:
+    driver: bridge

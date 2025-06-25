@@ -5,9 +5,16 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:single": "bash scripts/dev-single.sh",
     "build": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "deploy:single": "bash scripts/deploy-single.sh",
+    "docker:build": "docker build -f Dockerfile.single -t timeoff-manager:latest .",
+    "docker:run": "docker run -p 3000:3000 timeoff-manager:latest",
+    "docker:compose": "docker-compose -f docker-compose.single.yml up -d",
+    "docker:logs": "docker-compose -f docker-compose.single.yml logs -f",
+    "docker:stop": "docker-compose -f docker-compose.single.yml down"
   },
   "dependencies": {
     "@capacitor/android": "^5.7.0",
