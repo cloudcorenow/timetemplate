@@ -570,7 +570,7 @@ app.get('/health', async (c) => {
     timestamp: new Date().toISOString(),
     platform: 'Cloudflare Workers',
     database: 'Cloudflare D1',
-    domain: 'sapphireapp.site'
+    domain: 'timeoff-manager.lamado.workers.dev'
   })
 })
 

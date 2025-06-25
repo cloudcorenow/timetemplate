@@ -1,4 +1,4 @@
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://sapphireapp.site/api';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://timeoff-manager.lamado.workers.dev/api';
 
 class ApiService {
   private token: string | null = null;
