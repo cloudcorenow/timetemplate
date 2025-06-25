@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { TimeOffRequest, RequestStatus } from '../types/request';
 import { User } from '../types/user';
-import { apiService } from '../services/api';
+import { mockRequests } from '../data/mockData';
 
 interface RequestState {
   requests: TimeOffRequest[];
@@ -20,18 +20,9 @@ export const useRequestStore = create<RequestState>((set, get) => ({
   fetchRequests: async () => {
     set({ isLoading: true, error: null });
     try {
-      const requests = await apiService.getRequests();
-      
-      // Transform API response to match frontend types
-      const transformedRequests = requests.map((request: any) => ({
-        ...request,
-        startDate: new Date(request.startDate),
-        endDate: new Date(request.endDate),
-        createdAt: new Date(request.createdAt),
-        updatedAt: new Date(request.updatedAt)
-      }));
-      
-      set({ requests: transformedRequests, isLoading: false });
+      // Simulate API delay
+      await new Promise(resolve => setTimeout(resolve, 500));
+      set({ requests: [...mockRequests], isLoading: false });
     } catch (error) {
       console.error('Error fetching requests:', error);
       set({ error: 'Failed to fetch requests', isLoading: false });
@@ -41,19 +32,35 @@ export const useRequestStore = create<RequestState>((set, get) => ({
   addRequest: async (requestData) => {
     set({ isLoading: true, error: null });
     try {
-      await apiService.createRequest({
-        startDate: requestData.startDate.toISOString().split('T')[0],
-        endDate: requestData.endDate.toISOString().split('T')[0],
+      // Simulate API delay
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      const newRequest: TimeOffRequest = {
+        id: Math.random().toString(36).substring(2, 9),
+        employee: requestData.employee,
+        startDate: requestData.startDate,
+        endDate: requestData.endDate,
         type: requestData.type,
         reason: requestData.reason,
-        originalClockIn: requestData.originalClockIn,
-        originalClockOut: requestData.originalClockOut,
-        requestedClockIn: requestData.requestedClockIn,
-        requestedClockOut: requestData.requestedClockOut
-      });
+        status: 'pending',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        ...(requestData.originalClockIn && {
+          originalClockIn: requestData.originalClockIn,
+          originalClockOut: requestData.originalClockOut,
+          requestedClockIn: requestData.requestedClockIn,
+          requestedClockOut: requestData.requestedClockOut
+        })
+      };
       
-      // Refresh the requests list
-      await get().fetchRequests();
+      // Add to mock data
+      mockRequests.push(newRequest);
+      
+      // Update store
+      set(state => ({
+        requests: [...state.requests, newRequest],
+        isLoading: false
+      }));
     } catch (error) {
       console.error('Error adding request:', error);
       set({ error: 'Failed to create request', isLoading: false });
@@ -64,10 +71,36 @@ export const useRequestStore = create<RequestState>((set, get) => ({
   updateRequestStatus: async (id, status, manager, rejectionReason) => {
     set({ isLoading: true, error: null });
     try {
-      await apiService.updateRequestStatus(id, status, rejectionReason);
+      // Simulate API delay
+      await new Promise(resolve => setTimeout(resolve, 500));
       
-      // Refresh the requests list
-      await get().fetchRequests();
+      // Update in mock data
+      const requestIndex = mockRequests.findIndex(r => r.id === id);
+      if (requestIndex !== -1) {
+        mockRequests[requestIndex] = {
+          ...mockRequests[requestIndex],
+          status,
+          approvedBy: manager,
+          rejectionReason,
+          updatedAt: new Date()
+        };
+      }
+      
+      // Update store
+      set(state => ({
+        requests: state.requests.map(request =>
+          request.id === id
+            ? {
+                ...request,
+                status,
+                approvedBy: manager,
+                rejectionReason,
+                updatedAt: new Date()
+              }
+            : request
+        ),
+        isLoading: false
+      }));
     } catch (error) {
       console.error('Error updating request status:', error);
       set({ error: 'Failed to update request status', isLoading: false });
