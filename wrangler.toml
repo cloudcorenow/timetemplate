@@ -1,9 +1,17 @@
 name = "timeoff-manager"
+main = "src/worker.js"
 compatibility_date = "2025-06-25"
 
-[env.production]
-name = "timeoff-manager"
+[[d1_databases]]
+binding = "DB"
+database_name = "timeoff-manager-db"
+database_id = "your-database-id-will-be-generated"
 
-# Static site configuration for Cloudflare Pages
-[site]
-bucket = "./dist"
+[vars]
+NODE_ENV = "production"
+
+[env.production]
+name = "timeoff-manager-prod"
+
+[env.staging]
+name = "timeoff-manager-staging"

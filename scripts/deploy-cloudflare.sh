@@ -1,9 +1,9 @@
 #!/bin/bash
 
-# Cloudflare Pages deployment script
+# Cloudflare D1 + Workers deployment script
 set -e
 
-echo "☁️ Deploying TimeOff Manager to Cloudflare Pages..."
+echo "☁️ Deploying TimeOff Manager to Cloudflare (D1 + Workers)..."
 
 # Colors for output
 GREEN='\033[0;32m'
@@ -34,28 +34,55 @@ if ! command -v wrangler &> /dev/null; then
     npm install -g wrangler
 fi
 
+# Login to Cloudflare (if not already logged in)
+if ! wrangler whoami &> /dev/null; then
+    print_status "Please login to Cloudflare..."
+    wrangler login
+fi
+
+# Create D1 database if it doesn't exist
+print_status "Setting up Cloudflare D1 database..."
+DB_OUTPUT=$(wrangler d1 create timeoff-manager-db 2>/dev/null || echo "Database might already exist")
+
+if [[ $DB_OUTPUT == *"database_id"* ]]; then
+    # Extract database ID from output
+    DB_ID=$(echo "$DB_OUTPUT" | grep -o '"database_id": "[^"]*"' | cut -d'"' -f4)
+    print_success "Database created with ID: $DB_ID"
+    
+    # Update wrangler.toml with the database ID
+    sed -i.bak "s/database_id = \"your-database-id-will-be-generated\"/database_id = \"$DB_ID\"/" wrangler.toml
+    print_status "Updated wrangler.toml with database ID"
+else
+    print_warning "Database might already exist or there was an issue creating it"
+fi
+
 # Build the application
-print_status "Building application for production..."
+print_status "Building application for Cloudflare Workers..."
 npm run build
 
-# Copy redirects file to dist
-cp _redirects dist/
+# Copy built assets to worker directory
+mkdir -p src/assets
+cp -r dist/* src/
 
-print_warning "⚠️  IMPORTANT: This deploys only the frontend to Cloudflare Pages."
-print_warning "⚠️  The backend API will NOT be available on Cloudflare Workers."
-print_warning "⚠️  You'll need to deploy the backend separately (e.g., Railway, Render, Heroku)."
-echo ""
+# Deploy to Cloudflare Workers
+print_status "Deploying to Cloudflare Workers..."
+wrangler deploy
 
-# Deploy to Cloudflare Pages
-print_status "Deploying to Cloudflare Pages..."
-wrangler pages deploy dist --project-name timeoff-manager
-
-print_success "Frontend deployed to Cloudflare Pages!"
+print_success "Deployment complete!"
 echo ""
 echo "🌐 Your application should be available at:"
-echo "   https://timeoff-manager.pages.dev"
+echo "   https://timeoff-manager.your-subdomain.workers.dev"
 echo ""
-echo "⚠️  Next Steps:"
-echo "1. Deploy your backend API to a service like Railway, Render, or Heroku"
-echo "2. Update VITE_API_URL in your environment to point to your backend"
-echo "3. Rebuild and redeploy the frontend with the correct API URL"
+echo "🗄️ Database: Cloudflare D1"
+echo "⚡ Runtime: Cloudflare Workers"
+echo "🔧 API: Integrated with Workers"
+echo ""
+echo "📋 Demo Accounts:"
+echo "   👤 Employee: employee@example.com / password"
+echo "   👔 Manager:  manager@example.com / password"
+echo "   🔧 Admin:    admin@example.com / password"
+echo ""
+echo "🛠️ Management Commands:"
+echo "   Local dev:    npm run cf:dev"
+echo "   View logs:    wrangler tail"
+echo "   DB console:   wrangler d1 execute timeoff-manager-db --command='SELECT * FROM users'"
