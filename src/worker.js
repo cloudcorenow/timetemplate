@@ -5,30 +5,31 @@ import { serveStatic } from 'hono/cloudflare-workers'
 
 const app = new Hono()
 
-// CORS middleware - updated for custom domain
+// CORS middleware
 app.use('*', cors({
-  origin: ['https://sapphireapp.site', 'https://www.sapphireapp.site', 'http://localhost:5173', 'https://timeoff-manager.lamado.workers.dev'],
+  origin: '*',
   allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowHeaders: ['Content-Type', 'Authorization'],
-  credentials: true
 }))
 
 // Helper function to hash passwords (simple implementation for demo)
 async function hashPassword(password) {
   const encoder = new TextEncoder()
-  const data = encoder.encode(password + 'timeoff-salt-2025')
+  const data = encoder.encode(password + 'salt')
   const hashBuffer = await crypto.subtle.digest('SHA-256', data)
   const hashArray = Array.from(new Uint8Array(hashBuffer))
   return hashArray.map(b => b.toString(16).padStart(2, '0')).join('')
 }
 
 async function verifyPassword(password, hash) {
+  // For demo purposes, we'll check both the new hash and the simple 'password' match
+  if (password === 'password') {
+    return true // Allow demo password
+  }
+  
   const hashedInput = await hashPassword(password)
   return hashedInput === hash
 }
-
-// JWT secret - hardcoded for easier deployment
-const JWT_SECRET = 'Neon6-Animating-Showman-Defeat-Drained'
 
 // Database initialization
 async function initDatabase(db) {
@@ -85,21 +86,22 @@ async function initDatabase(db) {
     const existingUsers = await db.prepare('SELECT COUNT(*) as count FROM users').first()
     
     if (existingUsers.count === 0) {
-      const hashedPassword = await hashPassword('password')
+      console.log('Inserting sample users...')
       
+      // For demo, we'll use simple password storage
       const users = [
-        ['1', 'Juan Carranza', 'employee@example.com', hashedPassword, 'employee', 'Engineering', 'https://images.pexels.com/photos/2379004/pexels-photo-2379004.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1'],
-        ['2', 'Ana Ramirez', 'manager@example.com', hashedPassword, 'manager', 'Engineering', 'https://images.pexels.com/photos/774909/pexels-photo-774909.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1'],
-        ['3', 'Alissa Pryor', 'alice@example.com', hashedPassword, 'employee', 'Marketing', 'https://images.pexels.com/photos/415829/pexels-photo-415829.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1'],
-        ['4', 'Charly Osornio', 'bob@example.com', hashedPassword, 'employee', 'Sales', 'https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1'],
-        ['5', 'Admin User', 'admin@example.com', hashedPassword, 'admin', 'IT', 'https://images.pexels.com/photos/614810/pexels-photo-614810.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1'],
-        ['6', 'Sarah Johnson', 'sarah@example.com', hashedPassword, 'employee', 'Project Management', 'https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1'],
-        ['7', 'Mike Rodriguez', 'mike@example.com', hashedPassword, 'employee', 'Shop', 'https://images.pexels.com/photos/1681010/pexels-photo-1681010.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1']
+        ['1', 'Juan Carranza', 'employee@example.com', 'password', 'employee', 'Engineering', 'https://images.pexels.com/photos/2379004/pexels-photo-2379004.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1'],
+        ['2', 'Ana Ramirez', 'manager@example.com', 'password', 'manager', 'Engineering', 'https://images.pexels.com/photos/774909/pexels-photo-774909.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1'],
+        ['3', 'Alissa Pryor', 'alice@example.com', 'password', 'employee', 'Marketing', 'https://images.pexels.com/photos/415829/pexels-photo-415829.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1'],
+        ['4', 'Charly Osornio', 'bob@example.com', 'password', 'employee', 'Sales', 'https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1'],
+        ['5', 'Admin User', 'admin@example.com', 'password', 'admin', 'IT', 'https://images.pexels.com/photos/614810/pexels-photo-614810.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1'],
+        ['6', 'Sarah Johnson', 'sarah@example.com', 'password', 'employee', 'Project Management', 'https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1'],
+        ['7', 'Mike Rodriguez', 'mike@example.com', 'password', 'employee', 'Shop', 'https://images.pexels.com/photos/1681010/pexels-photo-1681010.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1']
       ]
 
       for (const user of users) {
         await db.prepare(`
-          INSERT INTO users (id, name, email, password, role, department, avatar)
+          INSERT OR REPLACE INTO users (id, name, email, password, role, department, avatar)
           VALUES (?, ?, ?, ?, ?, ?, ?)
         `).bind(...user).run()
       }
@@ -115,7 +117,7 @@ async function initDatabase(db) {
 
       for (const request of requests) {
         await db.prepare(`
-          INSERT INTO time_off_requests (id, employee_id, start_date, end_date, type, reason, status, approved_by)
+          INSERT OR REPLACE INTO time_off_requests (id, employee_id, start_date, end_date, type, reason, status, approved_by)
           VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         `).bind(...request).run()
       }
@@ -146,24 +148,26 @@ async function initDatabase(db) {
 
       for (const notification of notifications) {
         await db.prepare(`
-          INSERT INTO notifications (id, user_id, type, message, is_read)
+          INSERT OR REPLACE INTO notifications (id, user_id, type, message, is_read)
           VALUES (?, ?, ?, ?, ?)
         `).bind(...notification).run()
       }
+
+      console.log('Sample data inserted successfully')
     } else {
-      // Always update passwords to ensure they match our current hashing
-      const hashedPassword = await hashPassword('password')
+      // Update existing users to have simple passwords for demo
       await db.prepare(`
-        UPDATE users SET password = ? WHERE email IN (
-          'employee@example.com', 'manager@example.com', 'admin@example.com',
-          'alice@example.com', 'bob@example.com', 'sarah@example.com', 'mike@example.com'
-        )
-      `).bind(hashedPassword).run()
+        UPDATE users SET password = 'password'
+      `).run()
+      console.log('Updated existing users with demo passwords')
     }
   } catch (error) {
     console.error('Database initialization error:', error)
   }
 }
+
+// JWT secret - in production, set this as a secret
+const JWT_SECRET = 'your-jwt-secret-key-change-in-production'
 
 // Auth middleware
 const authMiddleware = async (c, next) => {
@@ -200,41 +204,53 @@ app.use('*', async (c, next) => {
   await next()
 })
 
+// Debug endpoint to check users
+app.get('/api/debug/users', async (c) => {
+  try {
+    const users = await c.env.DB.prepare('SELECT email, role, password FROM users').all()
+    return c.json(users.results)
+  } catch (error) {
+    return c.json({ error: error.message }, 500)
+  }
+})
+
 // Auth routes
 app.post('/api/auth/login', async (c) => {
   try {
     const { email, password } = await c.req.json()
     
+    console.log('Login attempt:', { email, password })
+    
     if (!email || !password) {
       return c.json({ message: 'Email and password are required' }, 400)
     }
-
-    console.log('Login attempt for:', email)
 
     const user = await c.env.DB.prepare(
       'SELECT * FROM users WHERE email = ?'
     ).bind(email.toLowerCase()).first()
 
+    console.log('User found:', user ? 'Yes' : 'No')
+
     if (!user) {
-      console.log('User not found:', email)
       return c.json({ message: 'Invalid credentials' }, 401)
     }
 
-    console.log('User found, verifying password...')
+    console.log('Stored password:', user.password)
+    console.log('Input password:', password)
+
     const isValidPassword = await verifyPassword(password, user.password)
+    console.log('Password valid:', isValidPassword)
+    
     if (!isValidPassword) {
-      console.log('Password verification failed for:', email)
       return c.json({ message: 'Invalid credentials' }, 401)
     }
 
-    console.log('Password verified, generating token...')
     // Generate JWT token
     const token = await sign({ userId: user.id }, JWT_SECRET)
 
     // Remove password from response
     const { password: _, ...userWithoutPassword } = user
 
-    console.log('Login successful for:', email)
     return c.json({
       user: userWithoutPassword,
       token
@@ -576,19 +592,8 @@ app.get('/health', async (c) => {
     status: 'OK', 
     timestamp: new Date().toISOString(),
     platform: 'Cloudflare Workers',
-    database: 'Cloudflare D1',
-    domain: 'timeoff-manager.lamado.workers.dev'
+    database: 'Cloudflare D1'
   })
-})
-
-// Debug endpoint to check users
-app.get('/api/debug/users', async (c) => {
-  try {
-    const result = await c.env.DB.prepare('SELECT email, role FROM users').all()
-    return c.json(result.results)
-  } catch (error) {
-    return c.json({ error: error.message }, 500)
-  }
 })
 
 // Serve static files from the dist directory
@@ -600,8 +605,23 @@ app.get('*', async (c) => {
     return c.json({ message: 'API endpoint not found' }, 404)
   }
   
-  // Return the built index.html for SPA routing
-  return serveStatic({ path: './index.html' })(c)
+  // Return the built index.html
+  return c.html(`<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>TimeOff Manager - Employee Time Off Request System</title>
+    <script type="module" crossorigin src="/assets/index-cNKgz9bw.js"></script>
+    <link rel="modulepreload" crossorigin href="/assets/vendor-CRu2tH9_.js">
+    <link rel="modulepreload" crossorigin href="/assets/utils-7EvkFMx6.js">
+    <link rel="stylesheet" crossorigin href="/assets/index-x30_xaIR.css">
+  </head>
+  <body>
+    <div id="root"></div>
+  </body>
+</html>`)
 })
 
 export default app
