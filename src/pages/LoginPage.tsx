@@ -32,7 +32,7 @@ const LoginPage: React.FC = () => {
       if (success) {
         navigate('/');
       } else {
-        setError('Invalid email or password. Please use the demo credentials below.');
+        setError('Invalid email or password. Please check your credentials and try again.');
       }
     } catch (err) {
       setError('An error occurred during login');
@@ -40,12 +40,6 @@ const LoginPage: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const handleDemoLogin = (demoEmail: string) => {
-    setEmail(demoEmail);
-    setPassword('password');
-    setError('');
   };
 
   return (
@@ -121,47 +115,6 @@ const LoginPage: React.FC = () => {
               </button>
             </div>
           </form>
-
-          <div className="mt-6">
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-300" />
-              </div>
-              <div className="relative flex justify-center text-sm">
-                <span className="bg-white px-2 text-gray-500">Demo Accounts</span>
-              </div>
-            </div>
-
-            <div className="mt-6 grid grid-cols-1 gap-3">
-              <button
-                type="button"
-                onClick={() => handleDemoLogin('employee@example.com')}
-                className="flex w-full justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 transition-colors"
-              >
-                👤 Employee Demo
-              </button>
-              <button
-                type="button"
-                onClick={() => handleDemoLogin('manager@example.com')}
-                className="flex w-full justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 transition-colors"
-              >
-                👔 Manager Demo
-              </button>
-              <button
-                type="button"
-                onClick={() => handleDemoLogin('admin@example.com')}
-                className="flex w-full justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 transition-colors"
-              >
-                🔧 Admin Demo
-              </button>
-            </div>
-
-            <div className="mt-4 rounded-md bg-blue-50 p-3 text-center text-xs text-blue-700">
-              <p><strong>Demo Credentials:</strong></p>
-              <p>Email: Any of the demo emails above</p>
-              <p>Password: <code className="bg-blue-100 px-1 rounded">password</code></p>
-            </div>
-          </div>
         </div>
       </div>
     </div>
