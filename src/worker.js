@@ -26,10 +26,8 @@ async function verifyPassword(password, hash) {
   return hashedInput === hash
 }
 
-// JWT secret - Use environment variable for security
-const getJWTSecret = (c) => {
-  return c.env.JWT_SECRET || 'development-fallback-secret-change-in-production'
-}
+// JWT secret - hardcoded for easier deployment
+const JWT_SECRET = 'Neon6-Animating-Showman-Defeat-Drained'
 
 // Database initialization
 async function initDatabase(db) {
@@ -166,7 +164,7 @@ const authMiddleware = async (c, next) => {
     }
 
     const token = authHeader.split(' ')[1]
-    const payload = await verify(token, getJWTSecret(c))
+    const payload = await verify(token, JWT_SECRET)
     
     // Get user from database
     const user = await c.env.DB.prepare(
@@ -214,8 +212,8 @@ app.post('/api/auth/login', async (c) => {
       return c.json({ message: 'Invalid credentials' }, 401)
     }
 
-    // Generate JWT token using environment secret
-    const token = await sign({ userId: user.id }, getJWTSecret(c))
+    // Generate JWT token
+    const token = await sign({ userId: user.id }, JWT_SECRET)
 
     // Remove password from response
     const { password: _, ...userWithoutPassword } = user
