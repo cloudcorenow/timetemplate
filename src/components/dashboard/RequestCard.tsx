@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { format } from 'date-fns';
-import { Calendar, Clock, CheckCircle2, XCircle } from 'lucide-react';
+import { Calendar, Clock, CheckCircle2, XCircle, Building2 } from 'lucide-react';
 import { TimeOffRequest } from '../../types/request';
 import { useAuth } from '../../context/AuthContext';
 import { useRequestStore } from '../../store/requestStore';
@@ -71,6 +71,7 @@ const RequestCard: React.FC<RequestCardProps> = ({ request, isManager }) => {
   };
 
   const isTimeEditRequest = request.type === 'time edit';
+  const isOwnRequest = user?.id === request.employee.id;
 
   return (
     <div className="overflow-hidden rounded-lg bg-white shadow transition-shadow hover:shadow-md">
@@ -85,7 +86,15 @@ const RequestCard: React.FC<RequestCardProps> = ({ request, isManager }) => {
           </div>
           <div className="ml-3">
             <p className="font-medium text-gray-900">{request.employee.name}</p>
-            <p className="text-xs text-gray-500">{request.employee.department}</p>
+            <div className="flex items-center text-xs text-gray-500">
+              <Building2 size={12} className="mr-1" />
+              {request.employee.department}
+              {request.employee.role === 'manager' && (
+                <span className="ml-2 inline-flex items-center rounded-full bg-purple-100 px-1.5 py-0.5 text-xs font-medium text-purple-800">
+                  Manager
+                </span>
+              )}
+            </div>
           </div>
         </div>
         <RequestStatusBadge status={request.status} />
@@ -144,8 +153,15 @@ const RequestCard: React.FC<RequestCardProps> = ({ request, isManager }) => {
               <strong>Reason for rejection:</strong> {request.rejectionReason}
             </div>
           )}
+
+          {request.status === 'approved' && request.approvedBy && (
+            <div className="mb-3 rounded-md bg-green-50 p-2 text-xs text-green-700">
+              <strong>Approved by:</strong> {request.approvedBy.name}
+            </div>
+          )}
           
-          {isManager && request.status === 'pending' && (
+          {/* Show approval buttons for managers/admins on pending requests (but not their own) */}
+          {isManager && request.status === 'pending' && !isOwnRequest && (
             <div className="mt-4">
               {showRejectionInput ? (
                 <div className="space-y-2">
@@ -157,6 +173,7 @@ const RequestCard: React.FC<RequestCardProps> = ({ request, isManager }) => {
                     onChange={(e) => setRejectionReason(e.target.value)}
                     className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500"
                     rows={2}
+                    placeholder="Please provide a reason for rejection..."
                   ></textarea>
                   <div className="flex justify-end space-x-2">
                     <button 
@@ -195,6 +212,13 @@ const RequestCard: React.FC<RequestCardProps> = ({ request, isManager }) => {
                   </button>
                 </div>
               )}
+            </div>
+          )}
+
+          {/* Show info for managers/admins viewing their own requests */}
+          {isManager && isOwnRequest && request.status === 'pending' && (
+            <div className="mt-4 rounded-md bg-blue-50 p-2 text-xs text-blue-700">
+              <strong>Note:</strong> This is your own request. Another manager or admin will need to approve it.
             </div>
           )}
         </div>

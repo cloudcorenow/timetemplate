@@ -19,14 +19,10 @@ const DashboardPage: React.FC = () => {
   }, [fetchRequests]);
 
   useEffect(() => {
-    if (isAdmin) {
-      // Admins see all requests
+    // Filter requests based on user role
+    if (isAdmin || isManager) {
+      // Managers and Admins see ALL requests across the organization
       setFilteredRequests(requests);
-    } else if (isManager) {
-      // Managers see requests from their department
-      setFilteredRequests(
-        requests.filter(request => request.employee.department === user?.department)
-      );
     } else if (user) {
       // Employees only see their own requests
       setFilteredRequests(
@@ -39,11 +35,12 @@ const DashboardPage: React.FC = () => {
     setActiveFilter(filter);
 
     let baseRequests = requests;
-    if (!isAdmin && isManager && user) {
-      baseRequests = requests.filter(request => request.employee.department === user.department);
-    } else if (!isAdmin && !isManager && user) {
+    
+    // Apply role-based filtering first
+    if (!isAdmin && !isManager && user) {
       baseRequests = requests.filter(request => request.employee.id === user.id);
     }
+    // For managers and admins, baseRequests = all requests (no filtering)
 
     switch (filter) {
       case 'pending':
@@ -67,14 +64,16 @@ const DashboardPage: React.FC = () => {
     }
   };
 
-  const pendingCount = filteredRequests.filter(r => r.status === 'pending').length;
-  const approvedCount = filteredRequests.filter(r => r.status === 'approved').length;
-  const rejectedCount = filteredRequests.filter(r => r.status === 'rejected').length;
+  // Calculate stats based on what the user can see
+  const visibleRequests = (isAdmin || isManager) ? requests : requests.filter(r => r.employee.id === user?.id);
   
-  const employeeCount = isAdmin 
+  const pendingCount = visibleRequests.filter(r => r.status === 'pending').length;
+  const approvedCount = visibleRequests.filter(r => r.status === 'approved').length;
+  const rejectedCount = visibleRequests.filter(r => r.status === 'rejected').length;
+  
+  // For employee count, show unique employees in visible requests
+  const employeeCount = isAdmin || isManager
     ? new Set(requests.map(r => r.employee.id)).size
-    : isManager && user
-    ? new Set(requests.filter(r => r.employee.department === user.department).map(r => r.employee.id)).size 
     : 0;
 
   if (isLoading) {
@@ -99,7 +98,7 @@ const DashboardPage: React.FC = () => {
             {isAdmin
               ? 'Manage time off requests across all departments'
               : isManager
-              ? 'Manage time off requests for your team'
+              ? 'Manage time off requests across the organization'
               : 'View and manage your time off requests'}
           </p>
         </div>
@@ -140,7 +139,7 @@ const DashboardPage: React.FC = () => {
         />
         {(isManager || isAdmin) ? (
           <StatsCard 
-            title="Team Members" 
+            title="Total Employees" 
             value={employeeCount.toString()} 
             icon={<Users className="text-blue-500" />}
             color="bg-blue-100"
@@ -160,6 +159,25 @@ const DashboardPage: React.FC = () => {
           />
         )}
       </div>
+
+      {/* Enhanced info for managers/admins */}
+      {(isManager || isAdmin) && (
+        <div className="rounded-lg bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 p-4">
+          <div className="flex items-center">
+            <div className="flex-shrink-0">
+              <Users className="h-6 w-6 text-blue-600" />
+            </div>
+            <div className="ml-3">
+              <h3 className="text-sm font-medium text-blue-800">
+                {isAdmin ? 'Admin Access' : 'Manager Access'}
+              </h3>
+              <p className="text-sm text-blue-700">
+                You can view and approve/reject requests from all employees across the organization.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Filters */}
       <div className="flex gap-2 overflow-x-auto pb-2">
@@ -181,7 +199,7 @@ const DashboardPage: React.FC = () => {
               : 'bg-white text-gray-700 hover:bg-gray-100'
           }`}
         >
-          Pending
+          Pending {pendingCount > 0 && `(${pendingCount})`}
         </button>
         <button
           onClick={() => filterRequests('approved')}

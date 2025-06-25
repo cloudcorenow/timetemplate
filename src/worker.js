@@ -211,6 +211,15 @@ const adminMiddleware = async (c, next) => {
   await next()
 }
 
+// Manager or Admin middleware
+const managerOrAdminMiddleware = async (c, next) => {
+  const user = c.get('user')
+  if (!['manager', 'admin'].includes(user.role)) {
+    return c.json({ message: 'Manager or Admin access required' }, 403)
+  }
+  await next()
+}
+
 // Initialize database middleware
 app.use('*', async (c, next) => {
   if (c.env.DB) {
@@ -320,13 +329,14 @@ app.get('/api/requests', authMiddleware, async (c) => {
 
     // Filter based on user role
     if (user.role === 'employee') {
+      // Employees only see their own requests
       query += ' WHERE r.employee_id = ?'
       params.push(user.id)
-    } else if (user.role === 'manager') {
-      query += ' WHERE e.department = ?'
-      params.push(user.department)
+    } else if (user.role === 'manager' || user.role === 'admin') {
+      // Managers and Admins see ALL requests across the organization
+      // This allows any manager/admin to approve any request
+      // No additional WHERE clause needed - they see everything
     }
-    // Admin sees all requests (no additional filter)
 
     query += ' ORDER BY r.created_at DESC'
 
@@ -407,22 +417,20 @@ app.post('/api/requests', authMiddleware, async (c) => {
       requestedClockOut || null
     ).run()
 
-    // Add notification for managers
-    if (user.role === 'employee') {
-      const managers = await c.env.DB.prepare(
-        'SELECT id FROM users WHERE role IN ("manager", "admin") AND department = ?'
-      ).bind(user.department).all()
+    // Add notification for ALL managers and admins (not just same department)
+    const managersAndAdmins = await c.env.DB.prepare(
+      'SELECT id FROM users WHERE role IN ("manager", "admin")'
+    ).all()
 
-      for (const manager of managers.results) {
-        await c.env.DB.prepare(`
-          INSERT INTO notifications (id, user_id, type, message)
-          VALUES (?, ?, 'info', ?)
-        `).bind(
-          crypto.randomUUID(),
-          manager.id,
-          `New ${type} request from ${user.name}`
-        ).run()
-      }
+    for (const manager of managersAndAdmins.results) {
+      await c.env.DB.prepare(`
+        INSERT INTO notifications (id, user_id, type, message)
+        VALUES (?, ?, 'info', ?)
+      `).bind(
+        crypto.randomUUID(),
+        manager.id,
+        `New ${type} request from ${user.name} (${user.department})`
+      ).run()
     }
 
     return c.json({ message: 'Request created successfully', id: requestId }, 201)
@@ -432,7 +440,7 @@ app.post('/api/requests', authMiddleware, async (c) => {
   }
 })
 
-app.patch('/api/requests/:id/status', authMiddleware, async (c) => {
+app.patch('/api/requests/:id/status', authMiddleware, managerOrAdminMiddleware, async (c) => {
   try {
     const user = c.get('user')
     const { id } = c.req.param()
@@ -440,10 +448,6 @@ app.patch('/api/requests/:id/status', authMiddleware, async (c) => {
 
     if (!['approved', 'rejected'].includes(status)) {
       return c.json({ message: 'Invalid status' }, 400)
-    }
-
-    if (!['manager', 'admin'].includes(user.role)) {
-      return c.json({ message: 'Insufficient permissions' }, 403)
     }
 
     // Get the request to find the employee
@@ -464,8 +468,8 @@ app.patch('/api/requests/:id/status', authMiddleware, async (c) => {
 
     // Add notification for employee
     const notificationMessage = status === 'approved' 
-      ? `Your ${request.type} request has been approved`
-      : `Your ${request.type} request has been rejected`
+      ? `Your ${request.type} request has been approved by ${user.name}`
+      : `Your ${request.type} request has been rejected by ${user.name}`
 
     await c.env.DB.prepare(`
       INSERT INTO notifications (id, user_id, type, message)
