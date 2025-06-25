@@ -17,26 +17,26 @@ const TeamOverviewPage: React.FC = () => {
         setIsLoading(true);
         setError(null);
         
-        let data;
-        if (isAdmin) {
-          // Admin gets all users except other admins
-          data = await apiService.getUsers();
-          setEmployees(data.filter((emp: User) => emp.role !== 'admin'));
-        } else {
-          // All other users (managers and employees) get all team members
-          // This gives everyone visibility into the organization
-          try {
-            data = await apiService.getUsers();
-            setEmployees(data.filter((emp: User) => emp.role !== 'admin'));
-          } catch (adminError) {
-            // If they don't have admin access, try team members endpoint
-            data = await apiService.getTeamMembers();
-            setEmployees(data);
-          }
-        }
+        // Always try to get all team members first (this endpoint returns all non-admin users)
+        const data = await apiService.getTeamMembers();
+        console.log('Team members fetched:', data);
+        setEmployees(data);
       } catch (error) {
-        console.error('Error fetching employees:', error);
-        setError('Failed to load team members');
+        console.error('Error fetching team members:', error);
+        
+        // If team endpoint fails, try the users endpoint (admin only)
+        if (isAdmin) {
+          try {
+            const adminData = await apiService.getUsers();
+            console.log('Admin users fetched:', adminData);
+            setEmployees(adminData.filter((emp: User) => emp.role !== 'admin'));
+          } catch (adminError) {
+            console.error('Error fetching admin users:', adminError);
+            setError('Failed to load team members');
+          }
+        } else {
+          setError('Failed to load team members');
+        }
       } finally {
         setIsLoading(false);
       }
@@ -89,7 +89,7 @@ const TeamOverviewPage: React.FC = () => {
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-800">Team Overview</h1>
         <p className="mt-1 text-gray-600">
-          View all team members across departments
+          View all team members across departments ({employees.length} total employees)
         </p>
       </div>
 

@@ -552,7 +552,7 @@ app.get('/api/notifications/unread-count', authMiddleware, async (c) => {
 })
 
 // Users routes
-app.get('/api/users', authMiddleware, adminMiddleware, async (c) => {
+app.get('/api/users', authMiddleware, async (c) => {
   try {
     const result = await c.env.DB.prepare(
       'SELECT id, name, email, role, department, avatar, created_at FROM users ORDER BY name'
@@ -732,28 +732,14 @@ app.delete('/api/users/:id', authMiddleware, adminMiddleware, async (c) => {
   }
 })
 
+// Team members endpoint - returns ALL non-admin users for team overview
 app.get('/api/users/team', authMiddleware, async (c) => {
   try {
-    const user = c.get('user')
-    
-    if (!['manager', 'admin'].includes(user.role)) {
-      return c.json({ message: 'Insufficient permissions' }, 403)
-    }
-
-    let query = 'SELECT id, name, email, role, department, avatar FROM users'
-    let params = []
-
-    if (user.role === 'manager') {
-      query += ' WHERE department = ? AND role != "admin"'
-      params.push(user.department)
-    } else {
-      query += ' WHERE role != "admin"'
-    }
-
-    query += ' ORDER BY name'
-
-    const stmt = c.env.DB.prepare(query)
-    const result = params.length > 0 ? await stmt.bind(...params).all() : await stmt.all()
+    // Return all non-admin users for team overview
+    // This allows everyone to see the full organization structure
+    const result = await c.env.DB.prepare(
+      'SELECT id, name, email, role, department, avatar FROM users WHERE role != "admin" ORDER BY department, name'
+    ).all()
     
     return c.json(result.results)
   } catch (error) {
