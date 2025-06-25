@@ -1,4 +1,4 @@
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://timeoff-manager.lamado.workers.dev/api';
+const API_BASE_URL = 'https://timeoff-manager.lamado.workers.dev/api';
 
 class ApiService {
   private token: string | null = null;
@@ -21,12 +21,6 @@ class ApiService {
     try {
       const response = await fetch(url, config);
       
-      // Check if response is HTML (backend not running)
-      const contentType = response.headers.get('content-type');
-      if (contentType && contentType.includes('text/html')) {
-        throw new Error('Backend server is not running. Please start the backend server.');
-      }
-      
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
@@ -35,7 +29,7 @@ class ApiService {
       return response.json();
     } catch (error) {
       if (error instanceof TypeError && error.message.includes('fetch')) {
-        throw new Error('Cannot connect to backend server. Please check your connection.');
+        throw new Error('Cannot connect to Cloudflare Workers. Please check your connection.');
       }
       throw error;
     }
