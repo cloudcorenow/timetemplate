@@ -32,7 +32,7 @@ const LoginPage: React.FC = () => {
       if (success) {
         navigate('/');
       } else {
-        setError('Invalid credentials');
+        setError('Invalid email or password. Please check your credentials.');
       }
     } catch (err) {
       setError('An error occurred during login');
@@ -40,6 +40,11 @@ const LoginPage: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleDemoLogin = (demoEmail: string) => {
+    setEmail(demoEmail);
+    setPassword('password');
   };
 
   return (
@@ -83,9 +88,6 @@ const LoginPage: React.FC = () => {
                 className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500"
                 placeholder="Enter your email"
               />
-              <p className="mt-1 text-xs text-gray-500">
-                Try: employee@example.com or manager@example.com
-              </p>
             </div>
 
             <div>
@@ -106,9 +108,6 @@ const LoginPage: React.FC = () => {
                 className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500"
                 placeholder="Enter your password"
               />
-              <p className="mt-1 text-xs text-gray-500">
-                Use "password" for demo
-              </p>
             </div>
 
             <div>
@@ -121,6 +120,45 @@ const LoginPage: React.FC = () => {
               </button>
             </div>
           </form>
+
+          <div className="mt-6">
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-gray-300" />
+              </div>
+              <div className="relative flex justify-center text-sm">
+                <span className="bg-white px-2 text-gray-500">Demo Accounts</span>
+              </div>
+            </div>
+
+            <div className="mt-6 grid grid-cols-1 gap-3">
+              <button
+                type="button"
+                onClick={() => handleDemoLogin('employee@example.com')}
+                className="flex w-full justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50"
+              >
+                Employee Demo
+              </button>
+              <button
+                type="button"
+                onClick={() => handleDemoLogin('manager@example.com')}
+                className="flex w-full justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50"
+              >
+                Manager Demo
+              </button>
+              <button
+                type="button"
+                onClick={() => handleDemoLogin('admin@example.com')}
+                className="flex w-full justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50"
+              >
+                Admin Demo
+              </button>
+            </div>
+
+            <div className="mt-4 text-center text-xs text-gray-500">
+              <p>All demo accounts use password: <strong>password</strong></p>
+            </div>
+          </div>
         </div>
       </div>
     </div>
