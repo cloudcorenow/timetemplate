@@ -14,14 +14,24 @@ npm run deploy:single
 docker-compose -f docker-compose.single.yml up -d
 ```
 
-### Option 2: Development Mode
+### Option 2: Full-Stack Alternative
+
+```bash
+# Deploy with full-stack approach
+npm run deploy:fullstack
+
+# Or manually:
+docker-compose -f docker-compose.fullstack.yml up -d
+```
+
+### Option 3: Development Mode
 
 ```bash
 # Start development server
 npm run dev:single
 ```
 
-### Option 3: Manual Docker
+### Option 4: Manual Docker
 
 ```bash
 # Build and run manually
