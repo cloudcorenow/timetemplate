@@ -113,9 +113,9 @@ const MobileRequestCard: React.FC<MobileRequestCardProps> = ({ request, isManage
             />
           </div>
           <div className="ml-3 flex-1 min-w-0">
-            <p className="font-medium text-gray-900 truncate">{request.employee.name}</p>
+            <p className="font-medium text-gray-900 dark:text-white truncate">{request.employee.name}</p>
             <div className="flex items-center">
-              <span className="text-xs text-gray-500 truncate">
+              <span className="text-xs text-gray-500 dark:text-gray-400 truncate">
                 {request.type} • {format(new Date(request.startDate), 'MMM d')}
               </span>
             </div>
@@ -124,15 +124,18 @@ const MobileRequestCard: React.FC<MobileRequestCardProps> = ({ request, isManage
         
         <div className="flex items-center space-x-2 flex-shrink-0">
           {getStatusBadge()}
-          {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+          {isExpanded ? 
+            <ChevronUp size={16} className="text-gray-400 dark:text-gray-500" /> : 
+            <ChevronDown size={16} className="text-gray-400 dark:text-gray-500" />
+          }
         </div>
       </div>
 
       {/* Expanded Content */}
       {isExpanded && (
-        <div className="border-t border-gray-100 p-4 space-y-4">
+        <div className="border-t border-gray-100 dark:border-gray-700 p-4 space-y-4">
           {/* Department */}
-          <div className="flex items-center text-sm text-gray-600">
+          <div className="flex items-center text-sm text-gray-600 dark:text-gray-300">
             <Building2 size={14} className="mr-2" />
             {request.employee.department}
             {request.employee.role === 'manager' && (
@@ -146,29 +149,29 @@ const MobileRequestCard: React.FC<MobileRequestCardProps> = ({ request, isManage
           {/* Date/Time Information */}
           {isTimeEditRequest ? (
             <div className="space-y-3">
-              <div className="flex items-center text-sm font-medium text-gray-700">
-                <Calendar size={14} className="mr-2 text-blue-500" />
+              <div className="flex items-center text-sm font-medium text-gray-700 dark:text-gray-200">
+                <Calendar size={14} className="mr-2 text-blue-500 dark:text-blue-400" />
                 <span>{format(new Date(request.startDate), 'EEEE, MMMM d, yyyy')}</span>
               </div>
               
-              <div className="rounded-lg bg-gray-50 p-3 space-y-2">
+              <div className="rounded-lg bg-gray-50 dark:bg-gray-800 p-3 space-y-2">
                 <div>
-                  <p className="text-xs font-medium text-gray-700 mb-1">Original Times</p>
-                  <p className="text-sm text-gray-600 font-mono">
+                  <p className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Original Times</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 font-mono">
                     {request.originalClockIn || 'N/A'} - {request.originalClockOut || 'N/A'}
                   </p>
                 </div>
                 <div>
-                  <p className="text-xs font-medium text-gray-700 mb-1">Requested Times</p>
-                  <p className="text-sm text-gray-600 font-mono">
+                  <p className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Requested Times</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 font-mono">
                     {request.requestedClockIn || 'N/A'} - {request.requestedClockOut || 'N/A'}
                   </p>
                 </div>
               </div>
             </div>
           ) : (
-            <div className="flex items-center text-sm font-medium text-gray-700">
-              <Calendar size={14} className="mr-2 text-blue-500" />
+            <div className="flex items-center text-sm font-medium text-gray-700 dark:text-gray-200">
+              <Calendar size={14} className="mr-2 text-blue-500 dark:text-blue-400" />
               <span>
                 {format(new Date(request.startDate), 'EEEE, MMMM d')} - {format(new Date(request.endDate), 'EEEE, MMMM d, yyyy')}
               </span>
@@ -177,21 +180,21 @@ const MobileRequestCard: React.FC<MobileRequestCardProps> = ({ request, isManage
 
           {/* Reason */}
           <div>
-            <p className="text-sm text-gray-600 leading-relaxed">{request.reason}</p>
+            <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">{request.reason}</p>
           </div>
 
           {/* Status Messages */}
           {request.status === 'rejected' && request.rejectionReason && (
-            <div className="rounded-lg bg-red-50 border border-red-200 p-3">
-              <p className="text-xs font-medium text-red-800 mb-1">Reason for rejection:</p>
-              <p className="text-xs text-red-700">{request.rejectionReason}</p>
+            <div className="rounded-lg bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 p-3">
+              <p className="text-xs font-medium text-red-800 dark:text-red-300 mb-1">Reason for rejection:</p>
+              <p className="text-xs text-red-700 dark:text-red-400">{request.rejectionReason}</p>
             </div>
           )}
 
           {request.status === 'approved' && request.approvedBy && (
-            <div className="rounded-lg bg-green-50 border border-green-200 p-3">
-              <p className="text-xs font-medium text-green-800 mb-1">Approved by:</p>
-              <p className="text-xs text-green-700">{request.approvedBy.name}</p>
+            <div className="rounded-lg bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800 p-3">
+              <p className="text-xs font-medium text-green-800 dark:text-green-300 mb-1">Approved by:</p>
+              <p className="text-xs text-green-700 dark:text-green-400">{request.approvedBy.name}</p>
             </div>
           )}
 
@@ -203,7 +206,7 @@ const MobileRequestCard: React.FC<MobileRequestCardProps> = ({ request, isManage
                   <textarea 
                     value={rejectionReason}
                     onChange={(e) => setRejectionReason(e.target.value)}
-                    className="w-full rounded-lg border border-gray-300 px-3 py-3 text-base focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-3 text-base text-gray-900 dark:text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:focus:ring-blue-400"
                     rows={3}
                     placeholder="Reason for rejection..."
                   />
@@ -261,15 +264,15 @@ const MobileRequestCard: React.FC<MobileRequestCardProps> = ({ request, isManage
 
           {/* Info for managers viewing their own requests */}
           {isManager && isOwnRequest && request.status === 'pending' && (
-            <div className="rounded-lg bg-blue-50 border border-blue-200 p-3">
-              <p className="text-xs text-blue-700">
+            <div className="rounded-lg bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 p-3">
+              <p className="text-xs text-blue-700 dark:text-blue-300">
                 <strong>Note:</strong> This is your own request. Another manager or admin will need to approve it.
               </p>
             </div>
           )}
 
           {/* Created date */}
-          <div className="flex items-center text-xs text-gray-500 pt-2 border-t border-gray-100">
+          <div className="flex items-center text-xs text-gray-500 dark:text-gray-400 pt-2 border-t border-gray-100 dark:border-gray-700">
             <Clock size={12} className="mr-1" />
             Created {format(new Date(request.createdAt), 'MMMM d, yyyy')}
           </div>

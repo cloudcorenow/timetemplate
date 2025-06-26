@@ -16,8 +16,8 @@ const MobileBottomNav: React.FC = () => {
   ];
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-30 border-t border-gray-200 dark:border-gray-700 bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm shadow-lg md:hidden ios-safe-bottom">
-      <div className="flex">
+    <nav className="fixed bottom-0 left-0 right-0 z-30 border-t border-gray-200 dark:border-gray-700 bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm shadow-lg md:hidden">
+      <div className="flex ios-safe-bottom">
         {navItems.map((item) => (
           <NavLink
             key={item.to}

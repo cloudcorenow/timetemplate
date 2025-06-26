@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Menu, Bell, Search, User, X, ChevronLeft } from 'lucide-react';
+import { Menu, Bell, Search, User, ChevronLeft } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useNotificationStore } from '../../store/notificationStore';
 import { useNavigate, useLocation } from 'react-router-dom';

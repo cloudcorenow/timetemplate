@@ -47,11 +47,6 @@ const MobileOptimizations: React.FC<MobileOptimizationsProps> = ({ children }) =
       <div className={`${isNative ? 'native-content' : ''}`}>
         {children}
       </div>
-
-      {/* Safe area bottom spacer for iOS */}
-      {isIOS && isNative && (
-        <div className="h-8" />
-      )}
     </div>
   );
 };
