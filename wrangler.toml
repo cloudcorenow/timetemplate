@@ -12,31 +12,33 @@ binding = "DB"
 database_name = "timeoff-manager-db"
 database_id = "95ef3d44-4b8f-4802-97bd-8e50861e5f49"
 
-# Custom domain routes - this should handle your sapphireapp.site domain
-[env.production]
-name = "timeoff-manager"
-routes = [
-  { pattern = "sapphireapp.site/*", zone_name = "sapphireapp.site" },
-  { pattern = "timeoff-manager.lamado.workers.dev/*" }
-]
-
+# Default environment variables
 [vars]
 NODE_ENV = "production"
 APP_URL = "https://sapphireapp.site"
 FROM_EMAIL = "noreply@sapphireapp.site"
 
-# Email service configuration (set these as secrets)
-# Option 1: API-based services (Resend, SendGrid, etc.)
-# EMAIL_SERVICE = "https://api.resend.com"  # set as secret
-# EMAIL_API_KEY = "your-email-api-key"      # set as secret
+# Production environment configuration
+[env.production]
+name = "timeoff-manager-prod"
+routes = [
+  { pattern = "sapphireapp.site/*", zone_name = "sapphireapp.site" },
+  { pattern = "timeoff-manager.lamado.workers.dev/*" }
+]
 
-# Option 2: SMTP configuration (set these as secrets)
-# SMTP_HOST = "smtp.gmail.com"              # set as secret
-# SMTP_PORT = "587"                         # set as secret  
-# SMTP_USER = "your-email@gmail.com"        # set as secret
-# SMTP_PASS = "your-app-password"           # set as secret
-# SMTP_SECURE = "false"                     # set as secret (true for port 465, false for 587)
-# SMTP_RELAY_URL = "https://your-smtp-relay.com/send"  # optional: custom SMTP relay service
+[env.production.vars]
+NODE_ENV = "production"
+APP_URL = "https://sapphireapp.site"
+FROM_EMAIL = "noreply@sapphireapp.site"
+
+# Development environment configuration
+[env.development]
+name = "timeoff-manager-dev"
+
+[env.development.vars]
+NODE_ENV = "development"
+APP_URL = "https://timeoff-manager-dev.lamado.workers.dev"
+FROM_EMAIL = "noreply@timeoff-manager-dev.lamado.workers.dev"
 
 # Static assets configuration
 [assets]
