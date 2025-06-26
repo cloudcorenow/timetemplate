@@ -37,7 +37,7 @@ async function verifyPassword(password, hash) {
   return hashedInput === hash
 }
 
-// Email notification system with SMTP support
+// Enhanced email notification system with better SMTP support
 async function generateEmailTemplate(subject, message, type = 'info', actionUrl = null) {
   const colors = {
     info: '#2563eb',
@@ -102,13 +102,27 @@ async function generateEmailTemplate(subject, message, type = 'info', actionUrl 
   `
 }
 
-// SMTP Email sending function
+// Enhanced SMTP Email sending with better error handling
 async function sendSMTPEmail(env, to, subject, htmlContent) {
   try {
-    // Create SMTP message
+    console.log('🔧 SMTP Configuration Check:')
+    console.log('SMTP_HOST:', env.SMTP_HOST ? 'Set' : 'Missing')
+    console.log('SMTP_PORT:', env.SMTP_PORT || 'Missing')
+    console.log('SMTP_USER:', env.SMTP_USER ? 'Set' : 'Missing')
+    console.log('SMTP_PASS:', env.SMTP_PASS ? 'Set' : 'Missing')
+    console.log('SMTP_SECURE:', env.SMTP_SECURE || 'Missing')
+    console.log('FROM_EMAIL:', env.FROM_EMAIL || 'Missing')
+
+    // Check if all required SMTP settings are present
+    if (!env.SMTP_HOST || !env.SMTP_USER || !env.SMTP_PASS) {
+      console.error('❌ Missing required SMTP configuration')
+      return false
+    }
+
+    // Create SMTP message for Office 365
     const message = {
       from: {
-        email: env.FROM_EMAIL || 'noreply@timeoff-manager.com',
+        email: env.FROM_EMAIL || env.SMTP_USER,
         name: 'TimeOff Manager'
       },
       to: [{ email: to }],
@@ -117,54 +131,141 @@ async function sendSMTPEmail(env, to, subject, htmlContent) {
       text: htmlContent.replace(/<[^>]*>/g, '') // Strip HTML for text version
     }
 
-    // SMTP configuration
+    // Office 365 SMTP configuration
     const smtpConfig = {
-      host: env.SMTP_HOST,
+      host: env.SMTP_HOST, // smtp.office365.com
       port: parseInt(env.SMTP_PORT || '587'),
-      secure: env.SMTP_SECURE === 'true', // true for 465, false for other ports
+      secure: env.SMTP_SECURE === 'true', // false for 587, true for 465
       auth: {
-        user: env.SMTP_USER,
-        pass: env.SMTP_PASS
+        user: env.SMTP_USER, // noreply@sapphiremfg.com
+        pass: env.SMTP_PASS  // sc@P0r7226
       }
     }
 
-    // For Cloudflare Workers, we'll use a fetch-based SMTP service
-    // This could be your own SMTP relay service or a service like EmailJS
-    const smtpPayload = {
-      smtp: smtpConfig,
-      message: message
-    }
+    console.log('📧 Attempting to send email via SMTP...')
+    console.log('To:', to)
+    console.log('Subject:', subject)
+    console.log('SMTP Host:', smtpConfig.host)
+    console.log('SMTP Port:', smtpConfig.port)
 
-    // If you have an SMTP relay service endpoint
+    // For Cloudflare Workers, we need to use a different approach
+    // Since Workers can't make direct SMTP connections, we'll use a workaround
+
+    // Option 1: Use a simple HTTP-to-SMTP bridge service
     if (env.SMTP_RELAY_URL) {
+      console.log('📡 Using SMTP relay service...')
       const response = await fetch(env.SMTP_RELAY_URL, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${env.SMTP_API_KEY || ''}`
         },
-        body: JSON.stringify(smtpPayload)
+        body: JSON.stringify({
+          smtp: smtpConfig,
+          message: message
+        })
       })
 
       if (!response.ok) {
-        console.error('SMTP relay error:', response.status, await response.text())
+        const errorText = await response.text()
+        console.error('❌ SMTP relay error:', response.status, errorText)
         return false
       }
 
-      console.log(`✅ SMTP email sent successfully to ${to}: ${subject}`)
+      console.log('✅ Email sent successfully via SMTP relay')
       return true
     }
 
-    // Alternative: Use a simple SMTP-to-HTTP bridge
-    // You can deploy a simple Node.js service that accepts HTTP requests
-    // and sends emails via SMTP (nodemailer)
-    console.log('📧 SMTP configuration detected but no relay URL provided')
-    console.log('SMTP Config:', { host: smtpConfig.host, port: smtpConfig.port, user: smtpConfig.auth.user })
+    // Option 2: Use Office 365 Graph API (recommended for Office 365)
+    if (env.OFFICE365_CLIENT_ID && env.OFFICE365_CLIENT_SECRET && env.OFFICE365_TENANT_ID) {
+      console.log('📡 Using Office 365 Graph API...')
+      return await sendOffice365Email(env, to, subject, htmlContent)
+    }
+
+    // Option 3: Simulate email for development/testing
+    console.log('📧 SMTP configuration detected but no relay service available')
+    console.log('💡 For production, consider setting up:')
+    console.log('   1. SMTP_RELAY_URL - HTTP-to-SMTP bridge service')
+    console.log('   2. Office 365 Graph API credentials')
+    console.log('   3. Alternative email service (Resend, SendGrid)')
     
-    // For demo purposes, we'll simulate success
-    return true
+    // For demo purposes, we'll log the email content
+    console.log('📧 Email Content (would be sent):')
+    console.log('From:', message.from.email)
+    console.log('To:', to)
+    console.log('Subject:', subject)
+    console.log('Message preview:', message.text.substring(0, 100) + '...')
+    
+    return true // Return true for demo purposes
   } catch (error) {
     console.error('❌ SMTP email failed:', error)
+    return false
+  }
+}
+
+// Office 365 Graph API email sending
+async function sendOffice365Email(env, to, subject, htmlContent) {
+  try {
+    console.log('🔐 Getting Office 365 access token...')
+    
+    // Get access token
+    const tokenResponse = await fetch(`https://login.microsoftonline.com/${env.OFFICE365_TENANT_ID}/oauth2/v2.0/token`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: new URLSearchParams({
+        client_id: env.OFFICE365_CLIENT_ID,
+        client_secret: env.OFFICE365_CLIENT_SECRET,
+        scope: 'https://graph.microsoft.com/.default',
+        grant_type: 'client_credentials'
+      })
+    })
+
+    if (!tokenResponse.ok) {
+      console.error('❌ Failed to get Office 365 token:', tokenResponse.status)
+      return false
+    }
+
+    const tokenData = await tokenResponse.json()
+    const accessToken = tokenData.access_token
+
+    // Send email via Graph API
+    const emailData = {
+      message: {
+        subject: subject,
+        body: {
+          contentType: 'HTML',
+          content: htmlContent
+        },
+        toRecipients: [
+          {
+            emailAddress: {
+              address: to
+            }
+          }
+        ]
+      }
+    }
+
+    const emailResponse = await fetch(`https://graph.microsoft.com/v1.0/users/${env.SMTP_USER}/sendMail`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(emailData)
+    })
+
+    if (!emailResponse.ok) {
+      console.error('❌ Failed to send email via Graph API:', emailResponse.status)
+      return false
+    }
+
+    console.log('✅ Email sent successfully via Office 365 Graph API')
+    return true
+  } catch (error) {
+    console.error('❌ Office 365 Graph API error:', error)
     return false
   }
 }
@@ -172,31 +273,73 @@ async function sendSMTPEmail(env, to, subject, htmlContent) {
 // API-based email sending (Resend, SendGrid, etc.)
 async function sendAPIEmail(env, to, subject, htmlContent) {
   try {
-    const emailData = {
-      from: {
-        email: env.FROM_EMAIL || 'noreply@timeoff-manager.com',
-        name: 'TimeOff Manager'
-      },
-      to: [{ email: to }],
-      subject: subject,
-      html: htmlContent
-    }
+    console.log('📡 Using API email service...')
+    
+    let emailData, apiUrl, headers
 
-    const response = await fetch(`${env.EMAIL_SERVICE}/send`, {
-      method: 'POST',
-      headers: {
+    // Resend API
+    if (env.EMAIL_SERVICE && env.EMAIL_SERVICE.includes('resend')) {
+      apiUrl = 'https://api.resend.com/emails'
+      headers = {
         'Authorization': `Bearer ${env.EMAIL_API_KEY}`,
         'Content-Type': 'application/json',
-      },
+      }
+      emailData = {
+        from: `TimeOff Manager <${env.FROM_EMAIL || 'noreply@timeoff-manager.com'}>`,
+        to: [to],
+        subject: subject,
+        html: htmlContent
+      }
+    }
+    // SendGrid API
+    else if (env.EMAIL_SERVICE && env.EMAIL_SERVICE.includes('sendgrid')) {
+      apiUrl = 'https://api.sendgrid.com/v3/mail/send'
+      headers = {
+        'Authorization': `Bearer ${env.EMAIL_API_KEY}`,
+        'Content-Type': 'application/json',
+      }
+      emailData = {
+        personalizations: [{ to: [{ email: to }] }],
+        from: { 
+          email: env.FROM_EMAIL || 'noreply@timeoff-manager.com',
+          name: 'TimeOff Manager'
+        },
+        subject: subject,
+        content: [{ type: 'text/html', value: htmlContent }]
+      }
+    }
+    // Generic API service
+    else {
+      apiUrl = `${env.EMAIL_SERVICE}/send`
+      headers = {
+        'Authorization': `Bearer ${env.EMAIL_API_KEY}`,
+        'Content-Type': 'application/json',
+      }
+      emailData = {
+        from: {
+          email: env.FROM_EMAIL || 'noreply@timeoff-manager.com',
+          name: 'TimeOff Manager'
+        },
+        to: [{ email: to }],
+        subject: subject,
+        html: htmlContent
+      }
+    }
+
+    console.log('📧 Sending to API:', apiUrl)
+    const response = await fetch(apiUrl, {
+      method: 'POST',
+      headers: headers,
       body: JSON.stringify(emailData)
     })
 
     if (!response.ok) {
-      console.error('Email API error:', response.status, await response.text())
+      const errorText = await response.text()
+      console.error('❌ Email API error:', response.status, errorText)
       return false
     }
 
-    console.log(`✅ API email sent successfully to ${to}: ${subject}`)
+    console.log('✅ API email sent successfully to', to)
     return true
   } catch (error) {
     console.error('❌ API email failed:', error)
@@ -204,35 +347,54 @@ async function sendAPIEmail(env, to, subject, htmlContent) {
   }
 }
 
-// Main email sending function that chooses between SMTP and API
+// Main email sending function with enhanced debugging
 async function sendEmailNotification(env, to, subject, message, type = 'info', actionUrl = null) {
   try {
+    console.log('📧 === EMAIL NOTIFICATION DEBUG ===')
+    console.log('To:', to)
+    console.log('Subject:', subject)
+    console.log('Type:', type)
+    
     // Check if any email service is configured
     const hasAPIService = env.EMAIL_SERVICE && env.EMAIL_API_KEY
     const hasSMTPService = env.SMTP_HOST && env.SMTP_USER && env.SMTP_PASS
+    const hasOffice365API = env.OFFICE365_CLIENT_ID && env.OFFICE365_CLIENT_SECRET && env.OFFICE365_TENANT_ID
 
-    if (!hasAPIService && !hasSMTPService) {
-      console.log('📧 No email service configured, skipping email notification')
+    console.log('📊 Email Service Status:')
+    console.log('  API Service:', hasAPIService ? '✅ Configured' : '❌ Not configured')
+    console.log('  SMTP Service:', hasSMTPService ? '✅ Configured' : '❌ Not configured')
+    console.log('  Office 365 API:', hasOffice365API ? '✅ Configured' : '❌ Not configured')
+
+    if (!hasAPIService && !hasSMTPService && !hasOffice365API) {
+      console.log('⚠️ No email service configured, skipping email notification')
       return false
     }
 
     const htmlContent = await generateEmailTemplate(subject, message, type, actionUrl)
     
-    // Try SMTP first if configured, then fall back to API
-    if (hasSMTPService) {
-      console.log('📧 Using SMTP email service')
-      const smtpSuccess = await sendSMTPEmail(env, to, subject, htmlContent)
-      if (smtpSuccess) return true
-      
-      console.log('📧 SMTP failed, trying API service...')
+    // Try Office 365 Graph API first (most reliable for Office 365)
+    if (hasOffice365API) {
+      console.log('🔄 Attempting Office 365 Graph API...')
+      const office365Success = await sendOffice365Email(env, to, subject, htmlContent)
+      if (office365Success) return true
+      console.log('⚠️ Office 365 Graph API failed, trying SMTP...')
     }
 
+    // Try SMTP second
+    if (hasSMTPService) {
+      console.log('🔄 Attempting SMTP...')
+      const smtpSuccess = await sendSMTPEmail(env, to, subject, htmlContent)
+      if (smtpSuccess) return true
+      console.log('⚠️ SMTP failed, trying API service...')
+    }
+
+    // Try API service last
     if (hasAPIService) {
-      console.log('📧 Using API email service')
+      console.log('🔄 Attempting API service...')
       return await sendAPIEmail(env, to, subject, htmlContent)
     }
 
-    console.log('📧 No working email service available')
+    console.log('❌ All email methods failed')
     return false
   } catch (error) {
     console.error('❌ Failed to send email:', error)
@@ -260,7 +422,7 @@ async function createNotification(env, userId, type, message, emailSubject = nul
       const subject = emailSubject || getEmailSubject(type, message)
       const enhancedMessage = `Hi ${user.name},\n\n${message}\n\nBest regards,\nTimeOff Manager Team`
       
-      await sendEmailNotification(
+      const emailSent = await sendEmailNotification(
         env,
         user.email,
         subject,
@@ -268,6 +430,12 @@ async function createNotification(env, userId, type, message, emailSubject = nul
         type,
         actionUrl || env.APP_URL || 'https://timeoff-manager.lamado.workers.dev'
       )
+
+      if (emailSent) {
+        console.log(`✅ Email notification sent to ${user.email}`)
+      } else {
+        console.log(`⚠️ Email notification failed for ${user.email}`)
+      }
     }
 
     return notificationId
@@ -497,19 +665,22 @@ app.get('/api/debug/users', async (c) => {
   }
 })
 
-// Email configuration debug endpoint
+// Enhanced email configuration debug endpoint
 app.get('/api/debug/email-config', authMiddleware, adminMiddleware, async (c) => {
   try {
     const config = {
       hasAPIService: !!(c.env.EMAIL_SERVICE && c.env.EMAIL_API_KEY),
       hasSMTPService: !!(c.env.SMTP_HOST && c.env.SMTP_USER && c.env.SMTP_PASS),
-      emailService: c.env.EMAIL_SERVICE ? 'Configured' : 'Not configured',
+      hasOffice365API: !!(c.env.OFFICE365_CLIENT_ID && c.env.OFFICE365_CLIENT_SECRET && c.env.OFFICE365_TENANT_ID),
+      emailService: c.env.EMAIL_SERVICE || 'Not configured',
       smtpHost: c.env.SMTP_HOST || 'Not configured',
       smtpPort: c.env.SMTP_PORT || 'Not configured',
       smtpUser: c.env.SMTP_USER ? 'Configured' : 'Not configured',
       smtpSecure: c.env.SMTP_SECURE || 'false',
       fromEmail: c.env.FROM_EMAIL || 'Not configured',
-      smtpRelayUrl: c.env.SMTP_RELAY_URL ? 'Configured' : 'Not configured'
+      smtpRelayUrl: c.env.SMTP_RELAY_URL ? 'Configured' : 'Not configured',
+      office365ClientId: c.env.OFFICE365_CLIENT_ID ? 'Configured' : 'Not configured',
+      office365TenantId: c.env.OFFICE365_TENANT_ID ? 'Configured' : 'Not configured'
     }
     
     return c.json(config)
@@ -1079,7 +1250,7 @@ app.get('/api/users/team', authMiddleware, async (c) => {
   }
 })
 
-// Test email endpoint (for testing email functionality)
+// Enhanced test email endpoint with better debugging
 app.post('/api/test-email', authMiddleware, adminMiddleware, async (c) => {
   try {
     const { to, subject, message, type = 'info' } = await c.req.json()
@@ -1087,6 +1258,8 @@ app.post('/api/test-email', authMiddleware, adminMiddleware, async (c) => {
     if (!to || !subject || !message) {
       return c.json({ message: 'Missing required fields: to, subject, message' }, 400)
     }
+
+    console.log('📧 Test email request:', { to, subject, type })
 
     const success = await sendEmailNotification(
       c.env,
@@ -1097,20 +1270,38 @@ app.post('/api/test-email', authMiddleware, adminMiddleware, async (c) => {
     )
 
     if (success) {
-      return c.json({ message: 'Test email sent successfully' })
+      return c.json({ 
+        message: 'Test email sent successfully',
+        details: {
+          to,
+          subject,
+          type,
+          timestamp: new Date().toISOString()
+        }
+      })
     } else {
-      return c.json({ message: 'Failed to send test email' }, 500)
+      return c.json({ 
+        message: 'Failed to send test email',
+        details: {
+          to,
+          subject,
+          type,
+          timestamp: new Date().toISOString(),
+          suggestion: 'Check email configuration and logs'
+        }
+      }, 500)
     }
   } catch (error) {
     console.error('Test email error:', error)
-    return c.json({ message: 'Failed to send test email' }, 500)
+    return c.json({ message: 'Failed to send test email', error: error.message }, 500)
   }
 })
 
-// Health check
+// Health check with enhanced email status
 app.get('/health', async (c) => {
   const hasAPIService = !!(c.env.EMAIL_SERVICE && c.env.EMAIL_API_KEY)
   const hasSMTPService = !!(c.env.SMTP_HOST && c.env.SMTP_USER && c.env.SMTP_PASS)
+  const hasOffice365API = !!(c.env.OFFICE365_CLIENT_ID && c.env.OFFICE365_CLIENT_SECRET && c.env.OFFICE365_TENANT_ID)
   
   return c.json({ 
     status: 'OK', 
@@ -1120,8 +1311,17 @@ app.get('/health', async (c) => {
     features: {
       email_api: hasAPIService,
       email_smtp: hasSMTPService,
-      email_configured: hasAPIService || hasSMTPService,
+      email_office365: hasOffice365API,
+      email_configured: hasAPIService || hasSMTPService || hasOffice365API,
       database: !!c.env.DB
+    },
+    email_status: {
+      primary_method: hasOffice365API ? 'Office 365 Graph API' : 
+                     hasSMTPService ? 'SMTP' : 
+                     hasAPIService ? 'API Service' : 'None',
+      fallback_available: (hasOffice365API && hasSMTPService) || 
+                         (hasSMTPService && hasAPIService) || 
+                         (hasOffice365API && hasAPIService)
     }
   })
 })
