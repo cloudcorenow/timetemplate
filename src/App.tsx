@@ -10,6 +10,7 @@ import RequestFormPage from './pages/RequestFormPage';
 import MobileRequestFormPage from './pages/MobileRequestFormPage';
 import TeamOverviewPage from './pages/TeamOverviewPage';
 import EmployeeManagementPage from './pages/EmployeeManagementPage';
+import ResetPasswordPage from './pages/ResetPasswordPage';
 
 // Components
 import ResponsiveLayout from './components/layout/ResponsiveLayout';
@@ -36,6 +37,7 @@ function AppContent() {
       <Router>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
           <Route 
             path="/" 
             element={

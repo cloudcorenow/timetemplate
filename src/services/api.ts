@@ -59,6 +59,25 @@ class ApiService {
     });
   }
 
+  // Password reset methods
+  async forgotPassword(email: string) {
+    return this.request('/auth/forgot-password', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    });
+  }
+
+  async validateResetToken(token: string) {
+    return this.request(`/auth/validate-reset-token?token=${encodeURIComponent(token)}`);
+  }
+
+  async resetPassword(token: string, password: string) {
+    return this.request('/auth/reset-password', {
+      method: 'POST',
+      body: JSON.stringify({ token, password }),
+    });
+  }
+
   // Email preferences methods
   async getEmailPreferences() {
     return this.request('/auth/email-preferences');
