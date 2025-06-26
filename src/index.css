@@ -418,14 +418,6 @@
     @apply border-gray-600;
   }
   
-  .dark .shadow-sm {
-    @apply shadow-md;
-  }
-  
-  .dark .shadow-md {
-    @apply shadow-lg;
-  }
-  
   .dark .bg-gray-50 {
     @apply bg-gray-900;
   }
