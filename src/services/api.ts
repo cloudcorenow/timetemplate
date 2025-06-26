@@ -155,6 +155,28 @@ class ApiService {
     });
   }
 
+  // Logs methods (admin only)
+  async getLogs(filters?: { level?: string; category?: string; startDate?: string; endDate?: string }) {
+    let queryParams = '';
+    
+    if (filters) {
+      const params = new URLSearchParams();
+      if (filters.level) params.append('level', filters.level);
+      if (filters.category) params.append('category', filters.category);
+      if (filters.startDate) params.append('startDate', filters.startDate);
+      if (filters.endDate) params.append('endDate', filters.endDate);
+      
+      queryParams = `?${params.toString()}`;
+    }
+    
+    return this.request(`/logs${queryParams}`);
+  }
+
+  // System status (admin only)
+  async getSystemStatus() {
+    return this.request('/debug/system-status');
+  }
+
   // Utility methods
   logout() {
     this.token = null;

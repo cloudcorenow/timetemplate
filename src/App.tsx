@@ -8,6 +8,7 @@ import CalendarPage from './pages/CalendarPage';
 import RequestFormPage from './pages/RequestFormPage';
 import TeamOverviewPage from './pages/TeamOverviewPage';
 import EmployeeManagementPage from './pages/EmployeeManagementPage';
+import LogsPage from './pages/LogsPage';
 
 // Mobile Pages
 import MobileDashboard from './components/mobile/MobileDashboard';
@@ -55,6 +56,7 @@ function AppContent() {
             <Route path="request" element={isMobile ? <MobileRequestFormPage /> : <RequestFormPage />} />
             <Route path="team" element={isMobile ? <MobileTeamView /> : <TeamOverviewPage />} />
             <Route path="employees" element={isMobile ? <MobileEmployeeManagement /> : <EmployeeManagementPage />} />
+            <Route path="logs" element={<LogsPage />} />
           </Route>
         </Routes>
       </Router>

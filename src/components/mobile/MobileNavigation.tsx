@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { Calendar, LayoutDashboard, FileText, UserCircle, Users, X, Menu, Settings, LogOut, Bell, HelpCircle, Moon,  Sun } from 'lucide-react';
+import { Calendar, LayoutDashboard, FileText, UserCircle, Users, X, Menu, Settings, LogOut, Bell, HelpCircle, Moon, Sun, Database } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useDarkMode } from '../../hooks/useDarkMode';
 import Badge from '../ui/Badge';
@@ -19,12 +19,18 @@ const MobileNavigation: React.FC<MobileNavigationProps> = ({
   const { user, logout } = useAuth();
   const { darkMode, toggleDarkMode } = useDarkMode();
 
+  // Check if we're on mobile
+  const isMobile = window.innerWidth < 768;
+
   const navigationItems = [
     { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
     { to: '/calendar', icon: Calendar, label: 'Calendar' },
     { to: '/request', icon: FileText, label: 'New Request' },
     { to: '/team', icon: UserCircle, label: 'Team Overview' },
-    ...(user?.role === 'admin' ? [{ to: '/employees', icon: Users, label: 'Manage Employees' }] : [])
+    ...(user?.role === 'admin' ? [
+      { to: '/employees', icon: Users, label: 'Manage Employees' },
+      { to: '/logs', icon: Database, label: 'System Logs' }
+    ] : [])
   ];
 
   return (
@@ -116,22 +122,26 @@ const MobileNavigation: React.FC<MobileNavigationProps> = ({
                 <HelpCircle size={20} className="mr-3 text-gray-500 dark:text-gray-400" />
                 Help & Support
               </button>
-              <button 
-                className="flex w-full items-center rounded-lg px-3 py-3 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800"
-                onClick={toggleDarkMode}
-              >
-                {darkMode ? (
-                  <>
-                    <Sun size={20} className="mr-3 text-amber-500" />
-                    Light Mode
-                  </>
-                ) : (
-                  <>
-                    <Moon size={20} className="mr-3 text-blue-500" />
-                    Dark Mode
-                  </>
-                )}
-              </button>
+              
+              {/* Only show dark mode toggle on mobile */}
+              {isMobile && (
+                <button 
+                  className="flex w-full items-center rounded-lg px-3 py-3 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800"
+                  onClick={toggleDarkMode}
+                >
+                  {darkMode ? (
+                    <>
+                      <Sun size={20} className="mr-3 text-amber-500" />
+                      Light Mode
+                    </>
+                  ) : (
+                    <>
+                      <Moon size={20} className="mr-3 text-blue-500" />
+                      Dark Mode
+                    </>
+                  )}
+                </button>
+              )}
             </div>
           </div>
         </div>

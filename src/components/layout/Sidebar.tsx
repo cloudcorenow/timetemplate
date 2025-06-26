@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { Calendar, LayoutDashboard, FileText, X, UserCircle, Users } from 'lucide-react';
+import { Calendar, LayoutDashboard, FileText, X, UserCircle, Users, Database } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
 interface SidebarProps {
@@ -122,6 +122,21 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, closeSidebar }) => {
             >
               <Users size={20} className="mr-3" />
               Manage Employees
+            </NavLink>
+            
+            <NavLink 
+              to="/logs" 
+              className={({ isActive }) => 
+                `flex items-center rounded-md px-4 py-2 text-base font-medium transition-colors duration-150 ${
+                  isActive 
+                    ? 'bg-blue-800 text-white' 
+                    : 'text-blue-100 hover:bg-blue-600'
+                }`
+              }
+              onClick={() => closeSidebar()}
+            >
+              <Database size={20} className="mr-3" />
+              System Logs
             </NavLink>
           </div>
         )}
