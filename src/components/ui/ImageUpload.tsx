@@ -149,9 +149,9 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
       <div
         className={`
           ${sizeClasses[size]} relative cursor-pointer overflow-hidden rounded-full border-2 transition-all duration-200
-          ${dragOver ? 'border-blue-400 bg-blue-50' : 'border-gray-300'}
-          ${disabled ? 'cursor-not-allowed opacity-50' : 'hover:border-blue-400'}
-          ${currentImage ? 'bg-gray-100' : 'bg-gray-50'}
+          ${dragOver ? 'border-blue-400 bg-blue-50 dark:border-blue-500 dark:bg-blue-900/30' : 'border-gray-300 dark:border-gray-600'}
+          ${disabled ? 'cursor-not-allowed opacity-50' : 'hover:border-blue-400 dark:hover:border-blue-500'}
+          ${currentImage ? 'bg-gray-100 dark:bg-gray-700' : 'bg-gray-50 dark:bg-gray-800'}
         `}
         onClick={handleClick}
         onDrop={handleDrop}
@@ -174,7 +174,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
             </div>
           </>
         ) : (
-          <div className="flex h-full w-full flex-col items-center justify-center text-gray-400">
+          <div className="flex h-full w-full flex-col items-center justify-center text-gray-400 dark:text-gray-500">
             <User size={iconSizes[size]} className="mb-1" />
             <Upload size={iconSizes[size] - 4} />
           </div>
@@ -187,7 +187,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
             e.stopPropagation();
             handleRemoveImage();
           }}
-          className="absolute -right-1 -top-1 rounded-full bg-red-500 p-1 text-white shadow-md transition-colors hover:bg-red-600"
+          className="absolute -right-1 -top-1 rounded-full bg-red-500 p-1 text-white shadow-md transition-colors hover:bg-red-600 dark:bg-red-600 dark:hover:bg-red-700"
           title="Remove image"
         >
           <X size={12} />
@@ -204,7 +204,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
       />
 
       {!currentImage && (
-        <p className="mt-2 text-center text-xs text-gray-500">
+        <p className="mt-2 text-center text-xs text-gray-500 dark:text-gray-400">
           Click to upload or drag & drop
           <br />
           Max 5MB, JPG/PNG
