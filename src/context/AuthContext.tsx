@@ -44,16 +44,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // Verify token is still valid by fetching current user
         apiService.getCurrentUser()
           .then(response => {
-            if (response && response.user) {
-              setUser(response.user);
-              localStorage.setItem('currentUser', JSON.stringify(response.user));
-            } else {
-              // Invalid response, clear storage
-              localStorage.removeItem('currentUser');
-              localStorage.removeItem('token');
-              setUser(null);
-              apiService.logout();
-            }
+            setUser(response.user);
+            localStorage.setItem('currentUser', JSON.stringify(response.user));
           })
           .catch(() => {
             // Token is invalid, clear storage
@@ -61,30 +53,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             localStorage.removeItem('token');
             setUser(null);
             apiService.logout();
-          })
-          .finally(() => {
-            setLoading(false);
           });
       } catch (error) {
         console.error('Error parsing saved user:', error);
         localStorage.removeItem('currentUser');
         localStorage.removeItem('token');
-        setLoading(false);
       }
-    } else {
-      setLoading(false);
     }
+    setLoading(false);
   }, []);
 
   const login = async (email: string, password: string): Promise<boolean> => {
     try {
       const response = await apiService.login(email, password);
-      if (response && response.user) {
-        setUser(response.user);
-        localStorage.setItem('currentUser', JSON.stringify(response.user));
-        return true;
-      }
-      return false;
+      setUser(response.user);
+      localStorage.setItem('currentUser', JSON.stringify(response.user));
+      return true;
     } catch (error) {
       console.error('Login error:', error);
       return false;

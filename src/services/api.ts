@@ -37,20 +37,15 @@ class ApiService {
 
   // Auth methods
   async login(email: string, password: string) {
-    try {
-      const response = await this.request('/auth/login', {
-        method: 'POST',
-        body: JSON.stringify({ email, password }),
-      });
-      
-      this.token = response.token;
-      localStorage.setItem('token', response.token);
-      
-      return response;
-    } catch (error) {
-      console.error('Login error:', error);
-      throw error;
-    }
+    const response = await this.request('/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ email, password }),
+    });
+    
+    this.token = response.token;
+    localStorage.setItem('token', response.token);
+    
+    return response;
   }
 
   async getCurrentUser() {
@@ -61,25 +56,6 @@ class ApiService {
     return this.request('/auth/avatar', {
       method: 'PATCH',
       body: JSON.stringify({ avatar }),
-    });
-  }
-
-  // Password reset methods
-  async forgotPassword(email: string) {
-    return this.request('/auth/forgot-password', {
-      method: 'POST',
-      body: JSON.stringify({ email }),
-    });
-  }
-
-  async validateResetToken(token: string) {
-    return this.request(`/auth/validate-reset-token?token=${encodeURIComponent(token)}`);
-  }
-
-  async resetPassword(token: string, password: string) {
-    return this.request('/auth/reset-password', {
-      method: 'POST',
-      body: JSON.stringify({ token, password }),
     });
   }
 
