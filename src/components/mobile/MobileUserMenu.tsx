@@ -8,6 +8,7 @@ import Button from '../ui/Button';
 import Badge from '../ui/Badge';
 import ImageUpload from '../ui/ImageUpload';
 import EmailPreferences from '../settings/EmailPreferences';
+import MobileHelpSupport from './MobileHelpSupport';
 
 interface MobileUserMenuProps {
   isOpen: boolean;
@@ -19,6 +20,7 @@ const MobileUserMenu: React.FC<MobileUserMenuProps> = ({ isOpen, onClose }) => {
   const navigate = useNavigate();
   const { addToast } = useToast();
   const [showEmailSettings, setShowEmailSettings] = useState(false);
+  const [showHelpSupport, setShowHelpSupport] = useState(false);
   const [isUpdatingAvatar, setIsUpdatingAvatar] = useState(false);
   const { darkMode, toggleDarkMode } = useDarkMode();
 
@@ -115,6 +117,7 @@ const MobileUserMenu: React.FC<MobileUserMenuProps> = ({ isOpen, onClose }) => {
             </button>
             
             <button
+              onClick={() => setShowHelpSupport(true)}
               className="flex w-full items-center rounded-lg px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800"
             >
               <HelpCircle size={20} className="mr-3 text-gray-500 dark:text-gray-400" />
@@ -153,6 +156,14 @@ const MobileUserMenu: React.FC<MobileUserMenuProps> = ({ isOpen, onClose }) => {
         <EmailPreferences 
           isOpen={showEmailSettings}
           onClose={() => setShowEmailSettings(false)}
+        />
+      )}
+
+      {/* Help & Support Modal */}
+      {showHelpSupport && (
+        <MobileHelpSupport
+          isOpen={showHelpSupport}
+          onClose={() => setShowHelpSupport(false)}
         />
       )}
     </>
