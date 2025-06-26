@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { Calendar, LayoutDashboard, FileText, UserCircle, Users, X, Menu, Settings, LogOut, Bell, HelpCircle, Moon, Sun } from 'lucide-react';
+import { Calendar, LayoutDashboard, FileText, UserCircle, Users, X, Menu, Settings, LogOut, Bell, HelpCircle, Moon,  Sun } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useDarkMode } from '../../hooks/useDarkMode';
 import Badge from '../ui/Badge';
