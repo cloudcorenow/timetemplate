@@ -1193,38 +1193,94 @@ app.patch('/api/users/:id/password', authMiddleware, adminMiddleware, async (c) 
   }
 })
 
-// Delete user
+// Delete user - ENHANCED VERSION WITH BETTER ERROR HANDLING
 app.delete('/api/users/:id', authMiddleware, adminMiddleware, async (c) => {
   try {
     const { id } = c.req.param()
     const currentUser = c.get('user')
 
+    console.log('🗑️ Delete user request for ID:', id)
+    console.log('🗑️ Current user:', currentUser.id, currentUser.name)
+
     // Prevent admin from deleting themselves
     if (id === currentUser.id) {
+      console.log('❌ Cannot delete own account')
       return c.json({ message: 'Cannot delete your own account' }, 400)
     }
 
-    // Check if user exists
+    // Check if user exists and get their info
     const existingUser = await c.env.DB.prepare(
-      'SELECT id, role FROM users WHERE id = ?'
+      'SELECT id, name, email, role FROM users WHERE id = ?'
     ).bind(id).first()
 
     if (!existingUser) {
+      console.log('❌ User not found:', id)
       return c.json({ message: 'User not found' }, 404)
     }
 
+    console.log('✅ User found:', existingUser.name, existingUser.email, existingUser.role)
+
     // Prevent deleting other admin users
     if (existingUser.role === 'admin') {
+      console.log('❌ Cannot delete admin users')
       return c.json({ message: 'Cannot delete admin users' }, 400)
     }
 
-    // Delete user (this will cascade delete related requests and notifications due to foreign keys)
-    await c.env.DB.prepare('DELETE FROM users WHERE id = ?').bind(id).run()
+    // Start transaction-like operations
+    console.log('🔄 Starting deletion process...')
 
-    return c.json({ message: 'User deleted successfully' })
+    try {
+      // First, delete related notifications
+      const notificationDeleteResult = await c.env.DB.prepare(
+        'DELETE FROM notifications WHERE user_id = ?'
+      ).bind(id).run()
+      console.log('🗑️ Deleted notifications:', notificationDeleteResult.changes)
+
+      // Then, delete related time off requests
+      const requestDeleteResult = await c.env.DB.prepare(
+        'DELETE FROM time_off_requests WHERE employee_id = ?'
+      ).bind(id).run()
+      console.log('🗑️ Deleted requests:', requestDeleteResult.changes)
+
+      // Finally, delete the user
+      const userDeleteResult = await c.env.DB.prepare(
+        'DELETE FROM users WHERE id = ?'
+      ).bind(id).run()
+      console.log('🗑️ User deletion result:', userDeleteResult)
+
+      if (userDeleteResult.changes === 0) {
+        console.log('❌ No user rows deleted')
+        return c.json({ message: 'Failed to delete user - no changes made' }, 500)
+      }
+
+      console.log('✅ User deleted successfully')
+
+      return c.json({ 
+        message: 'User deleted successfully',
+        details: {
+          deletedUser: {
+            id: existingUser.id,
+            name: existingUser.name,
+            email: existingUser.email
+          },
+          deletedNotifications: notificationDeleteResult.changes,
+          deletedRequests: requestDeleteResult.changes
+        }
+      })
+    } catch (deleteError) {
+      console.error('❌ Error during deletion:', deleteError)
+      return c.json({ 
+        message: 'Failed to delete user due to database error',
+        error: deleteError.message 
+      }, 500)
+    }
   } catch (error) {
-    console.error('Delete user error:', error)
-    return c.json({ message: 'Failed to delete user' }, 500)
+    console.error('❌ Delete user error:', error)
+    return c.json({ 
+      message: 'Failed to delete user', 
+      error: error.message,
+      stack: error.stack 
+    }, 500)
   }
 })
 
