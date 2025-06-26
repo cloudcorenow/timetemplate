@@ -7,6 +7,7 @@ import TouchOptimizedCard from './TouchOptimizedCard';
 import Badge from '../ui/Badge';
 import Button from '../ui/Button';
 import LoadingSpinner from '../ui/LoadingSpinner';
+import ScheduleModal from '../team/ScheduleModal';
 
 const MobileTeamView: React.FC = () => {
   const { user, isAdmin } = useAuth();
@@ -16,6 +17,8 @@ const MobileTeamView: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedDepartment, setSelectedDepartment] = useState<string>('all');
   const [showFilters, setShowFilters] = useState(false);
+  const [selectedEmployee, setSelectedEmployee] = useState<User | null>(null);
+  const [showScheduleModal, setShowScheduleModal] = useState(false);
 
   // Fetch employees from the database
   useEffect(() => {
@@ -70,6 +73,11 @@ const MobileTeamView: React.FC = () => {
     acc[dept].push(employee);
     return acc;
   }, {} as Record<string, User[]>);
+
+  const handleSchedule = (employee: User) => {
+    setSelectedEmployee(employee);
+    setShowScheduleModal(true);
+  };
 
   const departments = [...new Set(employees.map(emp => emp.department))].filter(Boolean);
 
@@ -259,12 +267,20 @@ const MobileTeamView: React.FC = () => {
                           <p className="text-xs text-gray-500 truncate">{member.email}</p>
                         </div>
                         
-                        <button
-                          onClick={() => window.open(`mailto:${member.email}`)}
-                          className="rounded-full p-2 text-gray-600 hover:bg-gray-100 active:bg-gray-200"
-                        >
-                          <Mail size={16} />
-                        </button>
+                        <div className="flex space-x-1">
+                          <button
+                            onClick={() => window.open(`mailto:${member.email}`)}
+                            className="rounded-full p-2 text-gray-600 hover:bg-gray-100 active:bg-gray-200"
+                          >
+                            <Mail size={16} />
+                          </button>
+                          <button
+                            onClick={() => handleSchedule(member)}
+                            className="rounded-full p-2 text-gray-600 hover:bg-gray-100 active:bg-gray-200"
+                          >
+                            <Calendar size={16} />
+                          </button>
+                        </div>
                       </div>
                     </TouchOptimizedCard>
                   ))}
@@ -304,18 +320,35 @@ const MobileTeamView: React.FC = () => {
                       </div>
                     </div>
                     
-                    <button
-                      onClick={() => window.open(`mailto:${member.email}`)}
-                      className="rounded-full p-2 text-gray-600 hover:bg-gray-100 active:bg-gray-200"
-                    >
-                      <Mail size={16} />
-                    </button>
+                    <div className="flex space-x-1">
+                      <button
+                        onClick={() => window.open(`mailto:${member.email}`)}
+                        className="rounded-full p-2 text-gray-600 hover:bg-gray-100 active:bg-gray-200"
+                      >
+                        <Mail size={16} />
+                      </button>
+                      <button
+                        onClick={() => handleSchedule(member)}
+                        className="rounded-full p-2 text-gray-600 hover:bg-gray-100 active:bg-gray-200"
+                      >
+                        <Calendar size={16} />
+                      </button>
+                    </div>
                   </div>
                 </TouchOptimizedCard>
               ))}
             </div>
           )}
         </div>
+      )}
+
+      {/* Schedule Modal */}
+      {selectedEmployee && (
+        <ScheduleModal
+          isOpen={showScheduleModal}
+          onClose={() => setShowScheduleModal(false)}
+          employee={selectedEmployee}
+        />
       )}
     </div>
   );

@@ -8,6 +8,7 @@ import AnimatedCard from '../components/ui/AnimatedCard';
 import Button from '../components/ui/Button';
 import Badge from '../components/ui/Badge';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
+import ScheduleModal from '../components/team/ScheduleModal';
 
 const TeamOverviewPage: React.FC = () => {
   const { user, isAdmin } = useAuth();
@@ -18,6 +19,8 @@ const TeamOverviewPage: React.FC = () => {
   const [selectedDepartment, setSelectedDepartment] = useState<string>('all');
   const [selectedRole, setSelectedRole] = useState<string>('all');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [selectedEmployee, setSelectedEmployee] = useState<User | null>(null);
+  const [showScheduleModal, setShowScheduleModal] = useState(false);
 
   // Fetch employees from the database
   useEffect(() => {
@@ -76,6 +79,11 @@ const TeamOverviewPage: React.FC = () => {
 
   const departments = [...new Set(employees.map(emp => emp.department))].filter(Boolean);
   const roles = [...new Set(employees.map(emp => emp.role))].filter(Boolean);
+
+  const handleSchedule = (employee: User) => {
+    setSelectedEmployee(employee);
+    setShowScheduleModal(true);
+  };
 
   const getRoleIcon = (role: string) => {
     switch (role) {
@@ -165,6 +173,7 @@ const TeamOverviewPage: React.FC = () => {
                 variant="ghost"
                 size="sm"
                 icon={<Calendar size={14} />}
+                onClick={() => handleSchedule(employee)}
               >
                 Schedule
               </Button>
@@ -222,6 +231,7 @@ const TeamOverviewPage: React.FC = () => {
               variant="ghost"
               size="sm"
               icon={<Calendar size={14} />}
+              onClick={() => handleSchedule(employee)}
             />
           </div>
         </div>
@@ -468,6 +478,15 @@ const TeamOverviewPage: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* Schedule Modal */}
+      {selectedEmployee && (
+        <ScheduleModal
+          isOpen={showScheduleModal}
+          onClose={() => setShowScheduleModal(false)}
+          employee={selectedEmployee}
+        />
+      )}
     </GradientBackground>
   );
 };
