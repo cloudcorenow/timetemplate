@@ -49,7 +49,7 @@ const MobileNavigation: React.FC<MobileNavigationProps> = ({
         ${isOpen ? 'translate-x-0' : '-translate-x-full'}
       `}>
         {/* Header */}
-        <div className="flex h-16 items-center justify-between border-b border-gray-200 dark:border-gray-700 px-4">
+        <div className="flex h-16 items-center justify-between border-b border-gray-200 dark:border-gray-700 px-4 py-3">
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white">TimeOff Manager</h2>
           <button
             onClick={onClose}
