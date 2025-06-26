@@ -50,29 +50,29 @@ const MobileRequestFormPage: React.FC = () => {
       value: 'paid time off' as RequestType,
       label: 'Paid Time Off',
       description: 'Vacation days, personal time',
-      icon: <MapPin size={20} className="text-blue-500" />,
-      color: 'border-blue-200 bg-blue-50'
+      icon: <MapPin size={20} className="text-blue-500 dark:text-blue-400" />,
+      color: 'border-blue-200 bg-blue-50 dark:border-blue-700 dark:bg-blue-900/30'
     },
     {
       value: 'sick leave' as RequestType,
       label: 'Sick Leave',
       description: 'Medical appointments, illness',
-      icon: <User size={20} className="text-orange-500" />,
-      color: 'border-orange-200 bg-orange-50'
+      icon: <User size={20} className="text-orange-500 dark:text-orange-400" />,
+      color: 'border-orange-200 bg-orange-50 dark:border-orange-700 dark:bg-orange-900/30'
     },
     {
       value: 'time edit' as RequestType,
       label: 'Time Edit',
       description: 'Correct clock in/out times',
-      icon: <Clock size={20} className="text-purple-500" />,
-      color: 'border-purple-200 bg-purple-50'
+      icon: <Clock size={20} className="text-purple-500 dark:text-purple-400" />,
+      color: 'border-purple-200 bg-purple-50 dark:border-purple-700 dark:bg-purple-900/30'
     },
     {
       value: 'other' as RequestType,
       label: 'Other',
       description: 'Bereavement, jury duty, etc.',
-      icon: <FileText size={20} className="text-gray-500" />,
-      color: 'border-gray-200 bg-gray-50'
+      icon: <FileText size={20} className="text-gray-500 dark:text-gray-400" />,
+      color: 'border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-800/50'
     }
   ];
 
@@ -188,8 +188,8 @@ const MobileRequestFormPage: React.FC = () => {
       case 1:
         return (
           <div className="space-y-4">
-            <h2 className="text-xl font-semibold text-gray-900">Request Type</h2>
-            <p className="text-gray-600">What type of request would you like to submit?</p>
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Request Type</h2>
+            <p className="text-gray-600 dark:text-gray-300">What type of request would you like to submit?</p>
             
             <div className="space-y-3">
               {requestTypes.map((option) => (
@@ -197,8 +197,8 @@ const MobileRequestFormPage: React.FC = () => {
                   key={option.value}
                   className={`p-4 border-2 transition-colors ${
                     type === option.value 
-                      ? 'border-blue-500 bg-blue-50' 
-                      : `border-gray-200 ${option.color}`
+                      ? 'border-blue-500 bg-blue-50 dark:border-blue-400 dark:bg-blue-900/30' 
+                      : `border-gray-200 dark:border-gray-700 ${option.color}`
                   }`}
                   onClick={() => setType(option.value as RequestType)}
                 >
@@ -208,14 +208,14 @@ const MobileRequestFormPage: React.FC = () => {
                         {option.icon}
                       </div>
                       <div>
-                        <p className="font-medium text-gray-900">{option.label}</p>
-                        <p className="text-sm text-gray-500">{option.desc}</p>
+                        <p className="font-medium text-gray-900 dark:text-white">{option.label}</p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">{option.description}</p>
                       </div>
                     </div>
                     <div className={`h-5 w-5 rounded-full border-2 flex items-center justify-center ${
                       type === option.value 
-                        ? 'border-blue-500 bg-blue-500' 
-                        : 'border-gray-300'
+                        ? 'border-blue-500 bg-blue-500 dark:border-blue-400 dark:bg-blue-400' 
+                        : 'border-gray-300 dark:border-gray-600'
                     }`}>
                       {type === option.value && (
                         <CheckCircle size={12} className="text-white" />
@@ -231,10 +231,10 @@ const MobileRequestFormPage: React.FC = () => {
       case 2:
         return (
           <div className="space-y-4">
-            <h2 className="text-xl font-semibold text-gray-900">
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
               {isTimeEditRequest ? 'Select Date' : 'Select Dates'}
             </h2>
-            <p className="text-gray-600">
+            <p className="text-gray-600 dark:text-gray-300">
               {isTimeEditRequest 
                 ? 'Choose the date you need to edit'
                 : 'Choose your time off dates'
@@ -257,16 +257,16 @@ const MobileRequestFormPage: React.FC = () => {
                 className="mx-auto"
                 disabled={getDisabledDates()}
                 modifiersClassNames={{
-                  selected: 'bg-blue-600 text-white rounded-full',
+                  selected: 'bg-blue-600 text-white dark:bg-blue-500 rounded-full',
                   today: 'border border-blue-500 font-bold',
-                  disabled: 'text-gray-300 line-through'
+                  disabled: 'text-gray-300 dark:text-gray-600 line-through'
                 }}
               />
             </TouchOptimizedCard>
             
             {range?.from && (
-              <TouchOptimizedCard className="p-3 bg-blue-50 border border-blue-200">
-                <div className="flex items-center text-blue-700">
+              <TouchOptimizedCard className="p-3 bg-blue-50 border border-blue-200 dark:bg-blue-900/30 dark:border-blue-700">
+                <div className="flex items-center text-blue-700 dark:text-blue-300">
                   <Calendar size={16} className="mr-2" />
                   <span className="text-sm font-medium">
                     {isTimeEditRequest 
@@ -286,61 +286,61 @@ const MobileRequestFormPage: React.FC = () => {
         if (isTimeEditRequest) {
           return (
             <div className="space-y-4">
-              <h2 className="text-xl font-semibold text-gray-900">Time Details</h2>
-              <p className="text-gray-600">Enter the original and correct times</p>
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Time Details</h2>
+              <p className="text-gray-600 dark:text-gray-300">Enter the original and correct times</p>
               
               <div className="space-y-4">
                 <TouchOptimizedCard className="p-4">
-                  <h3 className="font-medium text-gray-900 mb-3">Original Times</h3>
+                  <h3 className="font-medium text-gray-900 dark:text-white mb-3">Original Times</h3>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                         Clock In
                       </label>
                       <input
                         type="time"
                         value={originalClockIn}
                         onChange={(e) => setOriginalClockIn(e.target.value)}
-                        className="w-full rounded-lg border border-gray-300 px-3 py-3 text-base focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-3 text-base text-gray-900 dark:text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:focus:ring-blue-400"
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                         Clock Out
                       </label>
                       <input
                         type="time"
                         value={originalClockOut}
                         onChange={(e) => setOriginalClockOut(e.target.value)}
-                        className="w-full rounded-lg border border-gray-300 px-3 py-3 text-base focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-3 text-base text-gray-900 dark:text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:focus:ring-blue-400"
                       />
                     </div>
                   </div>
                 </TouchOptimizedCard>
 
                 <TouchOptimizedCard className="p-4">
-                  <h3 className="font-medium text-gray-900 mb-3">Correct Times</h3>
+                  <h3 className="font-medium text-gray-900 dark:text-white mb-3">Correct Times</h3>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                         Clock In
                       </label>
                       <input
                         type="time"
                         value={requestedClockIn}
                         onChange={(e) => setRequestedClockIn(e.target.value)}
-                        className="w-full rounded-lg border border-gray-300 px-3 py-3 text-base focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-3 text-base text-gray-900 dark:text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:focus:ring-blue-400"
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                         Clock Out
                       </label>
                       <input
                         type="time"
                         value={requestedClockOut}
                         onChange={(e) => setRequestedClockOut(e.target.value)}
-                        className="w-full rounded-lg border border-gray-300 px-3 py-3 text-base focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-3 text-base text-gray-900 dark:text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:focus:ring-blue-400"
                       />
                     </div>
                   </div>
@@ -351,32 +351,32 @@ const MobileRequestFormPage: React.FC = () => {
         } else {
           return (
             <div className="space-y-4">
-              <h2 className="text-xl font-semibold text-gray-900">Reason</h2>
-              <p className="text-gray-600">Please provide details about your request</p>
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Reason</h2>
+              <p className="text-gray-600 dark:text-gray-300">Please provide details about your request</p>
               
               <div>
                 <textarea
                   value={reason}
                   onChange={(e) => setReason(e.target.value)}
                   rows={6}
-                  className="w-full rounded-lg border border-gray-300 px-3 py-3 text-base focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-3 text-base text-gray-900 dark:text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:focus:ring-blue-400"
                   placeholder={
                     isTimeEditRequest 
                       ? "Please explain why you need to edit your time records..."
                       : "Please provide details about your time off request..."
                   }
                 />
-                <div className="mt-2 flex justify-between text-xs text-gray-500">
+                <div className="mt-2 flex justify-between text-xs text-gray-500 dark:text-gray-400">
                   <span>Be specific and provide relevant details</span>
                   <span>{reason.length}/500</span>
                 </div>
               </div>
 
               {type === 'sick leave' && (
-                <TouchOptimizedCard className="p-3 bg-amber-50 border border-amber-200">
+                <TouchOptimizedCard className="p-3 bg-amber-50 border border-amber-200 dark:bg-amber-900/30 dark:border-amber-800">
                   <div className="flex items-start">
-                    <AlertTriangle size={16} className="mr-2 mt-0.5 text-amber-600 flex-shrink-0" />
-                    <p className="text-sm text-amber-700">
+                    <AlertTriangle size={16} className="mr-2 mt-0.5 text-amber-600 dark:text-amber-400 flex-shrink-0" />
+                    <p className="text-sm text-amber-700 dark:text-amber-300">
                       For sick leave longer than 3 days, a doctor's note may be required upon return.
                     </p>
                   </div>
@@ -389,27 +389,27 @@ const MobileRequestFormPage: React.FC = () => {
       case 4:
         return (
           <div className="space-y-4">
-            <h2 className="text-xl font-semibold text-gray-900">Reason</h2>
-            <p className="text-gray-600">Please explain why you need to edit your time records</p>
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Reason</h2>
+            <p className="text-gray-600 dark:text-gray-300">Please explain why you need to edit your time records</p>
             
             <div>
               <textarea
                 value={reason}
                 onChange={(e) => setReason(e.target.value)}
                 rows={6}
-                className="w-full rounded-lg border border-gray-300 px-3 py-3 text-base focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-3 text-base text-gray-900 dark:text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:focus:ring-blue-400"
                 placeholder="Please explain why you need to edit your time records (e.g., forgot to clock in/out, system error, etc.)..."
               />
-              <div className="mt-2 flex justify-between text-xs text-gray-500">
+              <div className="mt-2 flex justify-between text-xs text-gray-500 dark:text-gray-400">
                 <span>Be specific and provide relevant details</span>
                 <span>{reason.length}/500</span>
               </div>
             </div>
 
-            <TouchOptimizedCard className="p-3 bg-blue-50 border border-blue-200">
+            <TouchOptimizedCard className="p-3 bg-blue-50 border border-blue-200 dark:bg-blue-900/30 dark:border-blue-700">
               <div className="flex items-start">
-                <Clock size={16} className="mr-2 mt-0.5 text-blue-600 flex-shrink-0" />
-                <p className="text-sm text-blue-700">
+                <Clock size={16} className="mr-2 mt-0.5 text-blue-600 dark:text-blue-400 flex-shrink-0" />
+                <p className="text-sm text-blue-700 dark:text-blue-300">
                   Time edit requests require manager approval. Please provide accurate times and a clear explanation.
                 </p>
               </div>
@@ -423,9 +423,9 @@ const MobileRequestFormPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       {/* Header */}
-      <div className="sticky top-0 z-10 border-b border-gray-200 bg-white/95 backdrop-blur-sm">
+      <div className="sticky top-0 z-10 border-b border-gray-200 dark:border-gray-700 bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm">
         <div className="flex h-14 items-center justify-between px-4">
           <div className="flex items-center">
             <button
@@ -436,24 +436,24 @@ const MobileRequestFormPage: React.FC = () => {
                   navigate('/');
                 }
               }}
-              className="rounded-lg p-2 text-gray-600 hover:bg-gray-100 active:bg-gray-200"
+              className="rounded-lg p-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 active:bg-gray-200 dark:active:bg-gray-700"
             >
               <ArrowLeft size={20} />
             </button>
-            <h1 className="ml-2 text-lg font-semibold text-gray-900">
+            <h1 className="ml-2 text-lg font-semibold text-gray-900 dark:text-white">
               {isTimeEditRequest ? 'Time Edit Request' : 'Time Off Request'}
             </h1>
           </div>
           
-          <div className="text-sm text-gray-500">
+          <div className="text-sm text-gray-500 dark:text-gray-400">
             {currentStep} of {totalSteps}
           </div>
         </div>
 
         {/* Progress Bar */}
-        <div className="h-1 bg-gray-200">
+        <div className="h-1 bg-gray-200 dark:bg-gray-700">
           <div 
-            className="h-full bg-blue-600 transition-all duration-300"
+            className="h-full bg-blue-600 dark:bg-blue-500 transition-all duration-300"
             style={{ width: `${(currentStep / totalSteps) * 100}%` }}
           />
         </div>
@@ -465,7 +465,7 @@ const MobileRequestFormPage: React.FC = () => {
       </div>
 
       {/* Bottom Actions */}
-      <div className="fixed bottom-0 left-0 right-0 border-t border-gray-200 bg-white/95 backdrop-blur-sm p-4 ios-safe-bottom">
+      <div className="fixed bottom-0 left-0 right-0 border-t border-gray-200 dark:border-gray-700 bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm p-4 ios-safe-bottom">
         <div className="flex space-x-3">
           {currentStep > 1 && (
             <Button
