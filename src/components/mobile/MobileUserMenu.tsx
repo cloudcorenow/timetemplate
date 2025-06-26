@@ -23,6 +23,9 @@ const MobileUserMenu: React.FC<MobileUserMenuProps> = ({ isOpen, onClose }) => {
   const [showHelpSupport, setShowHelpSupport] = useState(false);
   const [isUpdatingAvatar, setIsUpdatingAvatar] = useState(false);
   const { darkMode, toggleDarkMode } = useDarkMode();
+  
+  // Check if we're on mobile
+  const isMobile = window.innerWidth < 768;
 
   const handleLogout = () => {
     logout();
@@ -62,7 +65,7 @@ const MobileUserMenu: React.FC<MobileUserMenuProps> = ({ isOpen, onClose }) => {
   return (
     <>
       <div 
-        className="fixed inset-0 z-50 bg-black bg-opacity-50 dark:bg-opacity-70 md:hidden"
+        className="fixed inset-0 z-40 bg-black bg-opacity-50 dark:bg-opacity-70 md:hidden"
         onClick={onClose}
       />
       
@@ -124,17 +127,20 @@ const MobileUserMenu: React.FC<MobileUserMenuProps> = ({ isOpen, onClose }) => {
               Help & Support
             </button>
             
-            <button
-              onClick={toggleDarkMode}
-              className="flex w-full items-center rounded-lg px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800"
-            >
-              {darkMode ? (
-                <Sun size={20} className="mr-3 text-amber-500" />
-              ) : (
-                <Moon size={20} className="mr-3 text-blue-500" />
-              )}
-              {darkMode ? 'Light Mode' : 'Dark Mode'}
-            </button>
+            {/* Only show dark mode toggle on mobile */}
+            {isMobile && (
+              <button
+                onClick={toggleDarkMode}
+                className="flex w-full items-center rounded-lg px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800"
+              >
+                {darkMode ? (
+                  <Sun size={20} className="mr-3 text-amber-500" />
+                ) : (
+                  <Moon size={20} className="mr-3 text-blue-500" />
+                )}
+                {darkMode ? 'Light Mode' : 'Dark Mode'}
+              </button>
+            )}
           </div>
         </div>
         

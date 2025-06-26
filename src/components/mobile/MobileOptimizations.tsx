@@ -9,6 +9,9 @@ interface MobileOptimizationsProps {
 const MobileOptimizations: React.FC<MobileOptimizationsProps> = ({ children }) => {
   const { isNative, isAndroid, isIOS } = useCapacitor();
   const { darkMode } = useDarkMode();
+  
+  // Only apply dark mode on mobile
+  const isMobile = window.innerWidth < 768 || isNative;
 
   // Add platform-specific classes
   const platformClasses = [
@@ -16,7 +19,7 @@ const MobileOptimizations: React.FC<MobileOptimizationsProps> = ({ children }) =
     isAndroid && 'android-app',
     isIOS && 'ios-app',
     !isNative && 'web-app',
-    darkMode && 'dark'
+    isMobile && darkMode && 'dark'
   ].filter(Boolean).join(' ');
 
   // Apply dark mode to status bar on native apps

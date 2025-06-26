@@ -2,7 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Dark mode styles */
+/* Dark mode styles - only applied when .dark class is present */
 .dark {
   color-scheme: dark;
 }
@@ -360,8 +360,8 @@
   }
 }
 
-/* Dark mode styles */
-@layer base {
+/* Dark mode styles - ONLY APPLIED ON MOBILE */
+@media (max-width: 768px) {
   .dark body {
     @apply bg-gray-900;
     color: #f3f4f6;

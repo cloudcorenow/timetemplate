@@ -25,7 +25,7 @@ const ResponsiveLayout: React.FC = () => {
     return <MobileLayout />;
   }
 
-  // Desktop Layout
+  // Desktop Layout - Always light mode
   return (
     <div className="flex h-screen bg-gray-50">
       {/* Mobile sidebar overlay */}
