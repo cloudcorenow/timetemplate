@@ -2,22 +2,12 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Dark mode styles */
-.dark {
-  color-scheme: dark;
-}
-
 /* Custom calendar styles */
 .rdp {
   --rdp-cell-size: 40px;
   --rdp-accent-color: #2563eb;
   --rdp-background-color: #e0e7ff;
   margin: 0;
-}
-
-.dark .rdp {
-  --rdp-accent-color: #3b82f6;
-  --rdp-background-color: #1e3a8a;
 }
 
 .rdp-day_selected:not([disabled]) { 
@@ -30,28 +20,8 @@
   background-color: #1d4ed8;
 }
 
-.dark .rdp-day_selected:hover:not([disabled]) {
-  background-color: #2563eb;
-}
-
 .rdp-day:hover:not([disabled]) {
   background-color: #f3f4f6;
-}
-
-.dark .rdp-day:hover:not([disabled]) {
-  background-color: #374151;
-}
-
-.dark .rdp-day {
-  color: #e5e7eb;
-}
-
-.dark .rdp-head_cell {
-  color: #9ca3af;
-}
-
-.dark .rdp-button:focus-visible:not([disabled]) {
-  background-color: #374151;
 }
 
 /* Enhanced animations */
@@ -88,17 +58,6 @@
   }
 }
 
-@keyframes slideInUp {
-  from {
-    opacity: 0;
-    transform: translateY(100%);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
 @keyframes scaleIn {
   from {
     opacity: 0;
@@ -132,26 +91,12 @@
   animation: slideInLeft 0.5s ease-out forwards;
 }
 
-.animate-slide-in-up {
-  animation: slideInUp 0.3s ease-out forwards;
-}
-
 .animate-scale-in {
   animation: scaleIn 0.4s ease-out forwards;
 }
 
 .animate-pulse-slow {
   animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-}
-
-/* Hide scrollbar for mobile */
-.scrollbar-hide {
-  -ms-overflow-style: none;  /* IE and Edge */
-  scrollbar-width: none;  /* Firefox */
-}
-
-.scrollbar-hide::-webkit-scrollbar {
-  display: none;  /* Chrome, Safari and Opera */
 }
 
 /* Custom scrollbar */
@@ -164,25 +109,13 @@
   border-radius: 3px;
 }
 
-.dark .custom-scrollbar::-webkit-scrollbar-track {
-  background: #1f2937;
-}
-
 .custom-scrollbar::-webkit-scrollbar-thumb {
   background: #cbd5e1;
   border-radius: 3px;
 }
 
-.dark .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: #4b5563;
-}
-
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
   background: #94a3b8;
-}
-
-.dark .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: #6b7280;
 }
 
 /* Glass morphism effect */
@@ -190,11 +123,6 @@
   background: rgba(255, 255, 255, 0.25);
   backdrop-filter: blur(10px);
   border: 1px solid rgba(255, 255, 255, 0.18);
-}
-
-.dark .glass {
-  background: rgba(17, 24, 39, 0.75);
-  border: 1px solid rgba(55, 65, 81, 0.3);
 }
 
 /* Gradient text */
@@ -205,33 +133,13 @@
   background-clip: text;
 }
 
-.dark .gradient-text {
-  background: linear-gradient(135deg, #93c5fd 0%, #c4b5fd 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
 /* Enhanced shadows */
 .shadow-soft {
   box-shadow: 0 2px 15px -3px rgba(0, 0, 0, 0.07), 0 10px 20px -2px rgba(0, 0, 0, 0.04);
 }
 
-.dark .shadow-soft {
-  box-shadow: 0 2px 15px -3px rgba(0, 0, 0, 0.3), 0 10px 20px -2px rgba(0, 0, 0, 0.2);
-}
-
 .shadow-glow {
   box-shadow: 0 0 20px rgba(59, 130, 246, 0.15);
-}
-
-.dark .shadow-glow {
-  box-shadow: 0 0 20px rgba(59, 130, 246, 0.25);
-}
-
-/* Active scale for touch feedback */
-.active\:scale-98:active {
-  transform: scale(0.98);
 }
 
 /* Mobile optimizations */
@@ -299,20 +207,77 @@
 
 /* Safe area handling for iOS */
 @supports (padding: max(0px)) {
-  .ios-safe-bottom {
-    padding-bottom: max(16px, env(safe-area-inset-bottom));
+  .ios-app {
+    padding-left: max(0px, env(safe-area-inset-left));
+    padding-right: max(0px, env(safe-area-inset-right));
   }
   
   .ios-safe-top {
     padding-top: max(0px, env(safe-area-inset-top));
   }
   
-  .ios-safe-left {
-    padding-left: max(0px, env(safe-area-inset-left));
+  .ios-safe-bottom {
+    padding-bottom: max(0px, env(safe-area-inset-bottom));
   }
   
-  .ios-safe-right {
-    padding-right: max(0px, env(safe-area-inset-right));
+  .safe-area-bottom {
+    padding-bottom: max(16px, env(safe-area-inset-bottom));
+  }
+}
+
+/* Responsive text sizes for mobile */
+@media (max-width: 640px) {
+  .native-app {
+    font-size: 16px; /* Prevent zoom on iOS */
+  }
+  
+  .native-app input,
+  .native-app textarea,
+  .native-app select {
+    font-size: 16px; /* Prevent zoom on iOS */
+  }
+  
+  /* Mobile-specific calendar adjustments */
+  .rdp {
+    --rdp-cell-size: 36px;
+  }
+  
+  /* Larger touch targets for mobile */
+  .mobile-touch-target {
+    min-height: 48px;
+    min-width: 48px;
+  }
+}
+
+/* Focus styles for accessibility */
+.focus-ring {
+  @apply focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2;
+}
+
+/* Hover effects - disabled on touch devices */
+@media (hover: hover) {
+  .hover-lift {
+    transition: transform 0.2s ease-in-out;
+  }
+
+  .hover-lift:hover {
+    transform: translateY(-2px);
+  }
+}
+
+/* Loading skeleton */
+.skeleton {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: loading 1.5s infinite;
+}
+
+@keyframes loading {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
   }
 }
 
@@ -358,91 +323,35 @@
     top: 0;
     z-index: 40;
   }
+  
+  /* Fixed bottom buttons for mobile */
+  .mobile-fixed-bottom {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 50;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+    border-top: 1px solid rgba(0, 0, 0, 0.1);
+    padding: 16px;
+    padding-bottom: max(16px, env(safe-area-inset-bottom));
+  }
+  
+  /* Dark mode support for fixed bottom */
+  @media (prefers-color-scheme: dark) {
+    .mobile-fixed-bottom {
+      background: rgba(17, 24, 39, 0.95);
+      border-top-color: rgba(255, 255, 255, 0.1);
+    }
+  }
 }
 
-/* Dark mode styles */
-@layer base {
-  .dark body {
-    @apply bg-gray-900;
-    color: #f3f4f6;
-  }
-  
-  .dark h1, .dark h2, .dark h3, .dark h4, .dark h5, .dark h6 {
-    color: #ffffff;
-  }
-  
-  .dark p {
-    color: #d1d5db;
-  }
-  
-  .dark input, .dark textarea, .dark select {
-    @apply bg-gray-800 border-gray-700;
-    color: #ffffff;
-  }
-  
-  .dark input::placeholder, .dark textarea::placeholder {
-    color: #6b7280;
-  }
-  
-  .dark button {
-    color: #e5e7eb;
-  }
-  
-  .dark .bg-white {
-    @apply bg-gray-800;
-  }
-  
-  .dark .text-gray-900 {
-    color: #ffffff;
-  }
-  
-  .dark .text-gray-800 {
-    color: #f3f4f6;
-  }
-  
-  .dark .text-gray-700 {
-    color: #e5e7eb;
-  }
-  
-  .dark .text-gray-600 {
-    color: #d1d5db;
-  }
-  
-  .dark .text-gray-500 {
-    color: #9ca3af;
-  }
-  
-  .dark .border-gray-200 {
-    @apply border-gray-700;
-  }
-  
-  .dark .border-gray-300 {
-    @apply border-gray-600;
-  }
-  
-  .dark .bg-gray-50 {
-    @apply bg-gray-900;
-  }
-  
-  .dark .bg-gray-100 {
-    @apply bg-gray-800;
-  }
-  
-  .dark .hover\:bg-gray-100:hover {
-    @apply hover:bg-gray-800;
-  }
-  
-  .dark .hover\:bg-gray-50:hover {
-    @apply hover:bg-gray-800;
-  }
-  
-  /* Fixed shadow styles for dark mode */
-  .dark .shadow-md {
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2), 0 2px 4px -2px rgba(0, 0, 0, 0.2);
-  }
-  
-  .dark .shadow-lg {
-    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 4px 6px -4px rgba(0, 0, 0, 0.2);
+/* Dark mode support for mobile */
+@media (prefers-color-scheme: dark) {
+  .native-app {
+    background-color: #1f2937;
+    color: #f9fafb;
   }
 }
 
@@ -461,5 +370,36 @@
 @media (prefers-contrast: high) {
   .focus-ring {
     @apply focus:ring-4 focus:ring-yellow-400;
+  }
+}
+
+/* Ensure buttons are always visible with proper contrast */
+.mobile-button-visible {
+  background-color: #2563eb !important;
+  color: white !important;
+  border: 2px solid #2563eb !important;
+  min-height: 44px !important;
+  font-weight: 600 !important;
+  z-index: 9999 !important;
+  position: relative !important;
+}
+
+.mobile-button-visible:disabled {
+  background-color: #9ca3af !important;
+  border-color: #9ca3af !important;
+  color: #6b7280 !important;
+}
+
+/* Dark mode button visibility */
+@media (prefers-color-scheme: dark) {
+  .mobile-button-visible {
+    background-color: #3b82f6 !important;
+    border-color: #3b82f6 !important;
+  }
+  
+  .mobile-button-visible:disabled {
+    background-color: #4b5563 !important;
+    border-color: #4b5563 !important;
+    color: #9ca3af !important;
   }
 }
