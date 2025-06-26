@@ -590,9 +590,29 @@ app.use('*', async (c, next) => {
 // Debug endpoint to check users
 app.get('/api/debug/users', async (c) => {
   try {
-    const users = await c.env.DB.prepare('SELECT email, role, password FROM users').all()
-    return c.json(users.results)
+    console.log('=== DEBUG USERS ENDPOINT ===')
+    console.log('Request URL:', c.req.url)
+    console.log('Request Host:', c.req.header('host'))
+    
+    const users = await c.env.DB.prepare('SELECT id, email, role, password FROM users').all()
+    console.log('Users found:', users.results.length)
+    
+    users.results.forEach(user => {
+      console.log(`User: ${user.email} (${user.role}) - Password: ${user.password}`)
+    })
+    
+    return c.json({
+      host: c.req.header('host'),
+      url: c.req.url,
+      users: users.results.map(u => ({
+        id: u.id,
+        email: u.email,
+        role: u.role,
+        passwordLength: u.password.length
+      }))
+    })
   } catch (error) {
+    console.error('Debug users error:', error)
     return c.json({ error: error.message }, 500)
   }
 })
@@ -625,34 +645,56 @@ app.post('/api/auth/login', async (c) => {
   try {
     const { email, password } = await c.req.json()
     
-    console.log('Login attempt:', { email, password })
+    console.log('=== LOGIN ATTEMPT ===')
+    console.log('Request URL:', c.req.url)
+    console.log('Request Host:', c.req.header('host'))
+    console.log('Email:', email)
+    console.log('Password:', password)
     
     if (!email || !password) {
+      console.log('❌ Missing email or password')
       return c.json({ message: 'Email and password are required' }, 400)
     }
+
+    // First, let's see all users in the database
+    const allUsers = await c.env.DB.prepare('SELECT email, role FROM users').all()
+    console.log('All users in database:')
+    allUsers.results.forEach(u => console.log(`  - ${u.email} (${u.role})`))
 
     const user = await c.env.DB.prepare(
       'SELECT * FROM users WHERE email = ?'
     ).bind(email.toLowerCase()).first()
 
-    console.log('User found:', user ? 'Yes' : 'No')
+    console.log('User lookup result:', user ? 'FOUND' : 'NOT FOUND')
+    if (user) {
+      console.log('Found user:', {
+        id: user.id,
+        email: user.email,
+        role: user.role,
+        passwordInDB: user.password
+      })
+    }
 
     if (!user) {
+      console.log('❌ User not found for email:', email)
       return c.json({ message: 'Invalid credentials' }, 401)
     }
 
-    console.log('Stored password:', user.password)
-    console.log('Input password:', password)
+    console.log('Password verification:')
+    console.log('  Input password:', password)
+    console.log('  Stored password:', user.password)
 
     const isValidPassword = await verifyPassword(password, user.password)
-    console.log('Password valid:', isValidPassword)
+    console.log('  Password valid:', isValidPassword)
     
     if (!isValidPassword) {
+      console.log('❌ Invalid password')
       return c.json({ message: 'Invalid credentials' }, 401)
     }
 
     // Generate JWT token
     const token = await sign({ userId: user.id }, JWT_SECRET)
+    console.log('✅ Login successful, token generated')
 
     // Remove password from response
     const { password: _, ...userWithoutPassword } = user
@@ -662,7 +704,7 @@ app.post('/api/auth/login', async (c) => {
       token
     })
   } catch (error) {
-    console.error('Login error:', error)
+    console.error('❌ Login error:', error)
     return c.json({ message: 'Internal server error' }, 500)
   }
 })
