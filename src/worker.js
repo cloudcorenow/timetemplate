@@ -46,13 +46,6 @@ async function verifyPassword(inputPassword, storedPassword) {
   return isValid
 }
 
-// Generate secure reset token
-function generateResetToken() {
-  const array = new Uint8Array(32)
-  crypto.getRandomValues(array)
-  return Array.from(array, byte => byte.toString(16).padStart(2, '0')).join('')
-}
-
 // Mailgun email sending function
 async function sendMailgunEmail(env, to, subject, htmlContent) {
   try {
@@ -84,6 +77,71 @@ async function sendMailgunEmail(env, to, subject, htmlContent) {
     console.error('❌ Mailgun email failed:', error)
     return false
   }
+}
+
+// Email notification system with SMTP support
+async function generateEmailTemplate(subject, message, type = 'info', actionUrl = null) {
+  const colors = {
+    info: '#2563eb',
+    success: '#059669',
+    warning: '#d97706',
+    error: '#dc2626'
+  }
+
+  const icons = {
+    info: '📋',
+    success: '✅',
+    warning: '⚠️',
+    error: '❌'
+  }
+
+  const actionButton = actionUrl ? `
+    <div style="margin: 32px 0; text-align: center;">
+      <a href="${actionUrl}" 
+         style="background-color: ${colors[type]}; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold; font-size: 16px;">
+        Open TimeOff Manager
+      </a>
+    </div>
+  ` : ''
+
+  return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>${subject}</title>
+    </head>
+    <body style="margin: 0; padding: 0; background-color: #f3f4f6; font-family: Arial, sans-serif;">
+      <div style="max-width: 600px; margin: 0 auto; background-color: white;">
+        <!-- Header -->
+        <div style="background-color: ${colors[type]}; padding: 24px; text-align: center;">
+          <h1 style="color: white; margin: 0; font-size: 24px;">
+            ${icons[type]} TimeOff Manager
+          </h1>
+        </div>
+        
+        <!-- Content -->
+        <div style="padding: 32px;">
+          <h2 style="color: #1f2937; margin-top: 0; font-size: 20px;">${subject}</h2>
+          <p style="color: #4b5563; line-height: 1.6; font-size: 16px;">${message}</p>
+          
+          ${actionButton}
+        </div>
+        
+        <!-- Footer -->
+        <div style="background-color: #f9fafb; padding: 24px; text-align: center; border-top: 1px solid #e5e7eb;">
+          <p style="color: #6b7280; font-size: 14px; margin: 0;">
+            This is an automated notification from TimeOff Manager.
+          </p>
+          <p style="color: #6b7280; font-size: 12px; margin: 8px 0 0 0;">
+            To manage your email preferences, log in to your account.
+          </p>
+        </div>
+      </div>
+    </body>
+    </html>
+  `
 }
 
 // SMTP Email sending function
@@ -188,93 +246,8 @@ async function sendAPIEmail(env, to, subject, htmlContent) {
   }
 }
 
-// Email notification system with SMTP support
-async function generateEmailTemplate(subject, message, type = 'info', actionUrl = null, resetToken = null) {
-  const colors = {
-    info: '#2563eb',
-    success: '#059669',
-    warning: '#d97706',
-    error: '#dc2626'
-  }
-
-  const icons = {
-    info: '📋',
-    success: '✅',
-    warning: '⚠️',
-    error: '❌'
-  }
-
-  // Special handling for password reset emails
-  let actionButton = ''
-  if (resetToken && actionUrl) {
-    const resetUrl = `${actionUrl}/reset-password?token=${resetToken}`
-    actionButton = `
-      <div style="margin: 32px 0; text-align: center;">
-        <a href="${resetUrl}" 
-           style="background-color: ${colors[type]}; color: white; padding: 16px 32px; text-decoration: none; border-radius: 8px; display: inline-block; font-weight: bold; font-size: 16px;">
-          Reset Your Password
-        </a>
-        <p style="margin-top: 16px; font-size: 14px; color: #6b7280;">
-          This link will expire in 1 hour for security reasons.
-        </p>
-        <p style="margin-top: 8px; font-size: 12px; color: #9ca3af;">
-          If the button doesn't work, copy and paste this link: ${resetUrl}
-        </p>
-      </div>
-    `
-  } else if (actionUrl) {
-    actionButton = `
-      <div style="margin: 32px 0; text-align: center;">
-        <a href="${actionUrl}" 
-           style="background-color: ${colors[type]}; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold; font-size: 16px;">
-          Open TimeOff Manager
-        </a>
-      </div>
-    `
-  }
-
-  return `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <meta charset="utf-8">
-      <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>${subject}</title>
-    </head>
-    <body style="margin: 0; padding: 0; background-color: #f3f4f6; font-family: Arial, sans-serif;">
-      <div style="max-width: 600px; margin: 0 auto; background-color: white;">
-        <!-- Header -->
-        <div style="background-color: ${colors[type]}; padding: 24px; text-align: center;">
-          <h1 style="color: white; margin: 0; font-size: 24px;">
-            ${icons[type]} TimeOff Manager
-          </h1>
-        </div>
-        
-        <!-- Content -->
-        <div style="padding: 32px;">
-          <h2 style="color: #1f2937; margin-top: 0; font-size: 20px;">${subject}</h2>
-          <p style="color: #4b5563; line-height: 1.6; font-size: 16px;">${message}</p>
-          
-          ${actionButton}
-        </div>
-        
-        <!-- Footer -->
-        <div style="background-color: #f9fafb; padding: 24px; text-align: center; border-top: 1px solid #e5e7eb;">
-          <p style="color: #6b7280; font-size: 14px; margin: 0;">
-            This is an automated notification from TimeOff Manager.
-          </p>
-          <p style="color: #6b7280; font-size: 12px; margin: 8px 0 0 0;">
-            To manage your email preferences, log in to your account.
-          </p>
-        </div>
-      </div>
-    </body>
-    </html>
-  `
-}
-
 // Main email sending function that chooses between Mailgun, SMTP and API
-async function sendEmailNotification(env, to, subject, message, type = 'info', actionUrl = null, resetToken = null) {
+async function sendEmailNotification(env, to, subject, message, type = 'info', actionUrl = null) {
   try {
     // Check if any email service is configured
     const hasMailgun = env.MAILGUN_API_KEY && env.MAILGUN_DOMAIN
@@ -286,7 +259,7 @@ async function sendEmailNotification(env, to, subject, message, type = 'info', a
       return false
     }
 
-    const htmlContent = await generateEmailTemplate(subject, message, type, actionUrl, resetToken)
+    const htmlContent = await generateEmailTemplate(subject, message, type, actionUrl)
     
     // Try Mailgun first if configured
     if (hasMailgun) {
@@ -368,8 +341,6 @@ function getEmailSubject(type, message) {
     return '🔑 Your Password Has Been Reset'
   } else if (message.includes('Welcome')) {
     return '🎉 Welcome to TimeOff Manager!'
-  } else if (message.includes('reset your password')) {
-    return '🔐 Password Reset Request - TimeOff Manager'
   } else {
     return '📬 TimeOff Manager Notification'
   }
@@ -426,18 +397,6 @@ async function initDatabase(db) {
         type TEXT CHECK(type IN ('info', 'success', 'warning', 'error')) NOT NULL DEFAULT 'info',
         message TEXT NOT NULL,
         is_read BOOLEAN DEFAULT FALSE,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-      )
-    `).run()
-
-    // Create password reset tokens table
-    await db.prepare(`
-      CREATE TABLE IF NOT EXISTS password_reset_tokens (
-        id TEXT PRIMARY KEY,
-        user_id TEXT NOT NULL,
-        token TEXT UNIQUE NOT NULL,
-        expires_at DATETIME NOT NULL,
-        used BOOLEAN DEFAULT FALSE,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
       )
     `).run()
@@ -807,130 +766,6 @@ app.patch('/api/auth/avatar', authMiddleware, async (c) => {
   } catch (error) {
     console.error('Avatar update error:', error)
     return c.json({ message: 'Failed to update avatar' }, 500)
-  }
-})
-
-// Password reset request endpoint
-app.post('/api/auth/forgot-password', async (c) => {
-  try {
-    const { email } = await c.req.json()
-    
-    if (!email) {
-      return c.json({ message: 'Email is required' }, 400)
-    }
-
-    console.log('🔐 Password reset request for:', email)
-
-    // Check if user exists
-    const user = await c.env.DB.prepare(
-      'SELECT id, name, email FROM users WHERE email = ?'
-    ).bind(email.toLowerCase()).first()
-
-    // Always return success to prevent email enumeration attacks
-    if (!user) {
-      console.log('❌ User not found for password reset:', email)
-      return c.json({ 
-        message: 'If an account with that email exists, a password reset link has been sent.' 
-      })
-    }
-
-    // Generate secure reset token
-    const resetToken = generateResetToken()
-    const expiresAt = new Date(Date.now() + 60 * 60 * 1000) // 1 hour from now
-
-    // Store reset token in database
-    await c.env.DB.prepare(`
-      INSERT INTO password_reset_tokens (id, user_id, token, expires_at)
-      VALUES (?, ?, ?, ?)
-    `).bind(crypto.randomUUID(), user.id, resetToken, expiresAt.toISOString()).run()
-
-    // Send password reset email
-    const resetMessage = `You have requested to reset your password for your TimeOff Manager account.
-
-Click the button below to reset your password. This link will expire in 1 hour for security reasons.
-
-If you did not request this password reset, please ignore this email and your password will remain unchanged.`
-
-    const emailSent = await sendEmailNotification(
-      c.env,
-      user.email,
-      '🔐 Password Reset Request - TimeOff Manager',
-      resetMessage,
-      'warning',
-      c.env.APP_URL || 'https://sapphireapp.site',
-      resetToken
-    )
-
-    if (emailSent) {
-      console.log('✅ Password reset email sent to:', user.email)
-    } else {
-      console.log('⚠️ Failed to send password reset email to:', user.email)
-    }
-
-    return c.json({ 
-      message: 'If an account with that email exists, a password reset link has been sent.' 
-    })
-  } catch (error) {
-    console.error('Password reset request error:', error)
-    return c.json({ message: 'Internal server error' }, 500)
-  }
-})
-
-// Password reset verification endpoint
-app.post('/api/auth/reset-password', async (c) => {
-  try {
-    const { token, newPassword } = await c.req.json()
-    
-    if (!token || !newPassword) {
-      return c.json({ message: 'Token and new password are required' }, 400)
-    }
-
-    if (newPassword.length < 4) {
-      return c.json({ message: 'Password must be at least 4 characters long' }, 400)
-    }
-
-    console.log('🔐 Password reset attempt with token:', token.substring(0, 8) + '...')
-
-    // Find valid reset token
-    const resetTokenRecord = await c.env.DB.prepare(`
-      SELECT rt.*, u.id as user_id, u.name, u.email 
-      FROM password_reset_tokens rt
-      JOIN users u ON rt.user_id = u.id
-      WHERE rt.token = ? AND rt.used = FALSE AND rt.expires_at > datetime('now')
-    `).bind(token).first()
-
-    if (!resetTokenRecord) {
-      console.log('❌ Invalid or expired reset token')
-      return c.json({ message: 'Invalid or expired reset token' }, 400)
-    }
-
-    console.log('✅ Valid reset token found for user:', resetTokenRecord.email)
-
-    // Update user password
-    await c.env.DB.prepare(
-      'UPDATE users SET password = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?'
-    ).bind(newPassword, resetTokenRecord.user_id).run()
-
-    // Mark token as used
-    await c.env.DB.prepare(
-      'UPDATE password_reset_tokens SET used = TRUE WHERE id = ?'
-    ).bind(resetTokenRecord.id).run()
-
-    // Send confirmation notification
-    await createNotification(
-      c.env,
-      resetTokenRecord.user_id,
-      'success',
-      'Your password has been successfully reset. If you did not make this change, please contact support immediately.',
-      '✅ Password Reset Successful - TimeOff Manager'
-    )
-
-    console.log('✅ Password reset successful for user:', resetTokenRecord.email)
-
-    return c.json({ message: 'Password reset successful' })
-  } catch (error) {
-    console.error('Password reset error:', error)
-    return c.json({ message: 'Internal server error' }, 500)
   }
 })
 
@@ -1471,8 +1306,7 @@ app.get('/health', async (c) => {
       email_api: hasAPIService,
       email_smtp: hasSMTPService,
       email_configured: hasMailgun || hasAPIService || hasSMTPService,
-      database: !!c.env.DB,
-      password_reset: true
+      database: !!c.env.DB
     }
   })
 })
