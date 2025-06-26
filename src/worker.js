@@ -423,8 +423,8 @@ async function initDatabase(db) {
           name: 'Ana Ramirez',
           email: 'manager@example.com',
           password: 'password',
-          role: 'manager',
-          department: 'Engineering',
+          role: 'employee', // FIXED: Changed from 'manager' to 'employee' to match employee management section
+          department: 'Project Management', // FIXED: Updated department to match employee management section
           avatar: 'https://images.pexels.com/photos/774909/pexels-photo-774909.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1'
         },
         {
@@ -448,7 +448,7 @@ async function initDatabase(db) {
         {
           id: '5',
           name: 'Admin User',
-          email: 'it@sapphiremfg.com',
+          email: 'admin@example.com',
           password: 'password',
           role: 'admin',
           department: 'IT',
@@ -544,12 +544,23 @@ async function initDatabase(db) {
       
       // Fix any existing hashed passwords for the admin user
       console.log('🔧 Checking for password inconsistencies...')
-      const adminUser = await db.prepare('SELECT id, password FROM users WHERE email = ?').bind('it@sapphiremfg.com').first()
+      const adminUser = await db.prepare('SELECT id, password FROM users WHERE email = ?').bind('admin@example.com').first()
       
       if (adminUser && adminUser.password.length === 64) {
         console.log('🔧 Found hashed password for admin user, updating to plain text for demo')
         await db.prepare('UPDATE users SET password = ? WHERE id = ?').bind('password', adminUser.id).run()
         console.log('✅ Admin password updated to plain text')
+      }
+      
+      // FIXED: Update Ana Ramirez's role to match employee management section
+      console.log('🔧 Checking for role inconsistencies...')
+      const anaRamirez = await db.prepare('SELECT id, role, department FROM users WHERE name = ?').bind('Ana Ramirez').first()
+      
+      if (anaRamirez && anaRamirez.role === 'manager') {
+        console.log('🔧 Found role inconsistency for Ana Ramirez, updating to employee')
+        await db.prepare('UPDATE users SET role = ?, department = ? WHERE id = ?')
+          .bind('employee', 'Project Management', anaRamirez.id).run()
+        console.log('✅ Ana Ramirez role updated to employee')
       }
     }
 

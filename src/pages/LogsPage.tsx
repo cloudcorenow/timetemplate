@@ -74,9 +74,11 @@ const LogsPage: React.FC = () => {
     const mockLogs: LogEntry[] = [];
     const levels = ['info', 'warning', 'error', 'debug'];
     const categories = ['system', 'auth', 'request', 'database', 'email', 'user'];
+    
+    // FIXED: Updated user roles to match the employee management section
     const users = [
       { id: '1', name: 'Juan Carranza', role: 'employee' },
-      { id: '2', name: 'Ana Ramirez', role: 'manager' },
+      { id: '2', name: 'Ana Ramirez', role: 'employee' }, // Fixed: Changed from 'manager' to 'employee'
       { id: '5', name: 'Admin User', role: 'admin' }
     ];
     
