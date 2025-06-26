@@ -23,6 +23,8 @@ interface NotificationState {
 }
 
 const CACHE_DURATION = 30000; // 30 seconds
+const UNREAD_COUNT_FETCH_INTERVAL = 30000; // 30 seconds
+let unreadCountTimer: number | null = null;
 
 export const useNotificationStore = create<NotificationState>((set, get) => ({
   notifications: [],
@@ -242,3 +244,17 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
     return info;
   }
 }));
+
+// Setup periodic unread count fetching
+if (typeof window !== 'undefined') {
+  // Clear any existing timer
+  if (unreadCountTimer) {
+    window.clearInterval(unreadCountTimer);
+  }
+  
+  // Set up a new timer
+  unreadCountTimer = window.setInterval(() => {
+    const store = useNotificationStore.getState();
+    store.fetchUnreadCount();
+  }, UNREAD_COUNT_FETCH_INTERVAL);
+}
