@@ -1,4 +1,4 @@
-const API_BASE_URL = 'https://timeoff-manager.lamado.workers.dev/api';
+const API_BASE_URL = 'https://sapphireapp.site/api';
 
 class ApiService {
   private token: string | null = null;
@@ -29,7 +29,7 @@ class ApiService {
       return response.json();
     } catch (error) {
       if (error instanceof TypeError && error.message.includes('fetch')) {
-        throw new Error('Cannot connect to Cloudflare Workers. Please check your connection.');
+        throw new Error('Cannot connect to server. Please check your connection.');
       }
       throw error;
     }
