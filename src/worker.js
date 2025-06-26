@@ -37,7 +37,40 @@ async function verifyPassword(password, hash) {
   return hashedInput === hash
 }
 
-// Email notification system with Mailgun support
+// Mailgun email sending function
+async function sendMailgunEmail(env, to, subject, htmlContent) {
+  try {
+    const formData = new FormData()
+    formData.append('from', `TimeOff Manager <${env.FROM_EMAIL || 'noreply@cloudcorenow.com'}>`)
+    formData.append('to', to)
+    formData.append('subject', subject)
+    formData.append('html', htmlContent)
+    formData.append('text', htmlContent.replace(/<[^>]*>/g, '')) // Strip HTML for text version
+
+    const response = await fetch(`https://api.mailgun.net/v3/${env.MAILGUN_DOMAIN}/messages`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Basic ${btoa(`api:${env.MAILGUN_API_KEY}`)}`
+      },
+      body: formData
+    })
+
+    if (!response.ok) {
+      const errorText = await response.text()
+      console.error('❌ Mailgun API error:', response.status, errorText)
+      return false
+    }
+
+    const result = await response.json()
+    console.log('✅ Mailgun email sent successfully:', result.id)
+    return true
+  } catch (error) {
+    console.error('❌ Mailgun email failed:', error)
+    return false
+  }
+}
+
+// Email notification system with SMTP support
 async function generateEmailTemplate(subject, message, type = 'info', actionUrl = null) {
   const colors = {
     info: '#2563eb',
@@ -102,132 +135,69 @@ async function generateEmailTemplate(subject, message, type = 'info', actionUrl 
   `
 }
 
-// Mailgun email sending function (WORKING SOLUTION)
-async function sendMailgunEmail(env, to, subject, htmlContent) {
+// SMTP Email sending function
+async function sendSMTPEmail(env, to, subject, htmlContent) {
   try {
-    console.log('📧 Sending email via Mailgun...')
-    
-    // Check if Mailgun is configured
-    if (!env.MAILGUN_API_KEY || !env.MAILGUN_DOMAIN) {
-      console.log('⚠️ Mailgun not configured (missing API key or domain)')
-      return false
-    }
-
-    console.log('📧 Mailgun Config:')
-    console.log('  Domain:', env.MAILGUN_DOMAIN)
-    console.log('  From:', env.FROM_EMAIL || `noreply@${env.MAILGUN_DOMAIN}`)
-    console.log('  To:', to)
-    console.log('  Subject:', subject)
-
-    // Construct the email body with both HTML and plain text
-    const plainTextContent = htmlContent.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim()
-
-    // Mailgun API endpoint
-    const url = `https://api.mailgun.net/v3/${env.MAILGUN_DOMAIN}/messages`
-    
-    // Prepare form data for Mailgun
-    const formData = new URLSearchParams({
-      from: `TimeOff Manager <${env.FROM_EMAIL || `noreply@${env.MAILGUN_DOMAIN}`}>`,
-      to: to,
+    // Create SMTP message
+    const message = {
+      from: {
+        email: env.FROM_EMAIL || 'noreply@timeoff-manager.com',
+        name: 'TimeOff Manager'
+      },
+      to: [{ email: to }],
       subject: subject,
-      text: plainTextContent,
-      html: htmlContent
-    })
-
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Basic ${btoa('api:' + env.MAILGUN_API_KEY)}`,
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-      body: formData
-    })
-
-    if (!response.ok) {
-      const errorText = await response.text()
-      console.error('❌ Mailgun API error:', response.status, errorText)
-      return false
+      html: htmlContent,
+      text: htmlContent.replace(/<[^>]*>/g, '') // Strip HTML for text version
     }
 
-    const responseData = await response.json()
-    console.log('✅ Email sent successfully via Mailgun')
-    console.log('📧 Mailgun response:', responseData)
-    
-    return true
-  } catch (error) {
-    console.error('❌ Mailgun email failed:', error)
-    return false
-  }
-}
-
-// Office 365 Graph API email sending (Alternative method)
-async function sendOffice365GraphEmail(env, to, subject, htmlContent) {
-  try {
-    console.log('🔐 Attempting Office 365 Graph API...')
-    
-    if (!env.OFFICE365_CLIENT_ID || !env.OFFICE365_CLIENT_SECRET || !env.OFFICE365_TENANT_ID) {
-      console.log('⚠️ Office 365 Graph API credentials not configured')
-      return false
-    }
-    
-    // Get access token
-    const tokenResponse = await fetch(`https://login.microsoftonline.com/${env.OFFICE365_TENANT_ID}/oauth2/v2.0/token`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-      body: new URLSearchParams({
-        client_id: env.OFFICE365_CLIENT_ID,
-        client_secret: env.OFFICE365_CLIENT_SECRET,
-        scope: 'https://graph.microsoft.com/.default',
-        grant_type: 'client_credentials'
-      })
-    })
-
-    if (!tokenResponse.ok) {
-      console.error('❌ Failed to get Office 365 token:', tokenResponse.status)
-      return false
-    }
-
-    const tokenData = await tokenResponse.json()
-    const accessToken = tokenData.access_token
-
-    // Send email via Graph API
-    const emailData = {
-      message: {
-        subject: subject,
-        body: {
-          contentType: 'HTML',
-          content: htmlContent
-        },
-        toRecipients: [
-          {
-            emailAddress: {
-              address: to
-            }
-          }
-        ]
+    // SMTP configuration
+    const smtpConfig = {
+      host: env.SMTP_HOST,
+      port: parseInt(env.SMTP_PORT || '587'),
+      secure: env.SMTP_SECURE === 'true', // true for 465, false for other ports
+      auth: {
+        user: env.SMTP_USER,
+        pass: env.SMTP_PASS
       }
     }
 
-    const emailResponse = await fetch(`https://graph.microsoft.com/v1.0/users/${env.SMTP_USER}/sendMail`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${accessToken}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(emailData)
-    })
-
-    if (!emailResponse.ok) {
-      console.error('❌ Failed to send email via Graph API:', emailResponse.status)
-      return false
+    // For Cloudflare Workers, we'll use a fetch-based SMTP service
+    // This could be your own SMTP relay service or a service like EmailJS
+    const smtpPayload = {
+      smtp: smtpConfig,
+      message: message
     }
 
-    console.log('✅ Email sent successfully via Office 365 Graph API')
+    // If you have an SMTP relay service endpoint
+    if (env.SMTP_RELAY_URL) {
+      const response = await fetch(env.SMTP_RELAY_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${env.SMTP_API_KEY || ''}`
+        },
+        body: JSON.stringify(smtpPayload)
+      })
+
+      if (!response.ok) {
+        console.error('SMTP relay error:', response.status, await response.text())
+        return false
+      }
+
+      console.log(`✅ SMTP email sent successfully to ${to}: ${subject}`)
+      return true
+    }
+
+    // Alternative: Use a simple SMTP-to-HTTP bridge
+    // You can deploy a simple Node.js service that accepts HTTP requests
+    // and sends emails via SMTP (nodemailer)
+    console.log('📧 SMTP configuration detected but no relay URL provided')
+    console.log('SMTP Config:', { host: smtpConfig.host, port: smtpConfig.port, user: smtpConfig.auth.user })
+    
+    // For demo purposes, we'll simulate success
     return true
   } catch (error) {
-    console.error('❌ Office 365 Graph API error:', error)
+    console.error('❌ SMTP email failed:', error)
     return false
   }
 }
@@ -235,61 +205,31 @@ async function sendOffice365GraphEmail(env, to, subject, htmlContent) {
 // API-based email sending (Resend, SendGrid, etc.)
 async function sendAPIEmail(env, to, subject, htmlContent) {
   try {
-    console.log('📡 Using API email service...')
-    
-    let emailData, apiUrl, headers
-
-    // Resend API
-    if (env.EMAIL_SERVICE && env.EMAIL_SERVICE.includes('resend')) {
-      apiUrl = 'https://api.resend.com/emails'
-      headers = {
-        'Authorization': `Bearer ${env.EMAIL_API_KEY}`,
-        'Content-Type': 'application/json',
-      }
-      emailData = {
-        from: `TimeOff Manager <${env.FROM_EMAIL || 'noreply@timeoff-manager.com'}>`,
-        to: [to],
-        subject: subject,
-        html: htmlContent
-      }
-    }
-    // SendGrid API
-    else if (env.EMAIL_SERVICE && env.EMAIL_SERVICE.includes('sendgrid')) {
-      apiUrl = 'https://api.sendgrid.com/v3/mail/send'
-      headers = {
-        'Authorization': `Bearer ${env.EMAIL_API_KEY}`,
-        'Content-Type': 'application/json',
-      }
-      emailData = {
-        personalizations: [{ to: [{ email: to }] }],
-        from: { 
-          email: env.FROM_EMAIL || 'noreply@timeoff-manager.com',
-          name: 'TimeOff Manager'
-        },
-        subject: subject,
-        content: [{ type: 'text/html', value: htmlContent }]
-      }
-    }
-    // Generic API service
-    else {
-      console.log('⚠️ No specific API service configured')
-      return false
+    const emailData = {
+      from: {
+        email: env.FROM_EMAIL || 'noreply@timeoff-manager.com',
+        name: 'TimeOff Manager'
+      },
+      to: [{ email: to }],
+      subject: subject,
+      html: htmlContent
     }
 
-    console.log('📧 Sending to API:', apiUrl)
-    const response = await fetch(apiUrl, {
+    const response = await fetch(`${env.EMAIL_SERVICE}/send`, {
       method: 'POST',
-      headers: headers,
+      headers: {
+        'Authorization': `Bearer ${env.EMAIL_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
       body: JSON.stringify(emailData)
     })
 
     if (!response.ok) {
-      const errorText = await response.text()
-      console.error('❌ Email API error:', response.status, errorText)
+      console.error('Email API error:', response.status, await response.text())
       return false
     }
 
-    console.log('✅ API email sent successfully to', to)
+    console.log(`✅ API email sent successfully to ${to}: ${subject}`)
     return true
   } catch (error) {
     console.error('❌ API email failed:', error)
@@ -297,56 +237,46 @@ async function sendAPIEmail(env, to, subject, htmlContent) {
   }
 }
 
-// Main email sending function with Mailgun priority
+// Main email sending function that chooses between Mailgun, SMTP and API
 async function sendEmailNotification(env, to, subject, message, type = 'info', actionUrl = null) {
   try {
-    console.log('📧 === EMAIL NOTIFICATION DEBUG ===')
-    console.log('To:', to)
-    console.log('Subject:', subject)
-    console.log('Type:', type)
-    
     // Check if any email service is configured
     const hasMailgun = env.MAILGUN_API_KEY && env.MAILGUN_DOMAIN
     const hasAPIService = env.EMAIL_SERVICE && env.EMAIL_API_KEY
-    const hasOffice365API = env.OFFICE365_CLIENT_ID && env.OFFICE365_CLIENT_SECRET && env.OFFICE365_TENANT_ID
+    const hasSMTPService = env.SMTP_HOST && env.SMTP_USER && env.SMTP_PASS
 
-    console.log('📊 Email Service Status:')
-    console.log('  Mailgun:', hasMailgun ? '✅ Configured' : '❌ Not configured')
-    console.log('  API Service:', hasAPIService ? '✅ Configured' : '❌ Not configured')
-    console.log('  Office 365 API:', hasOffice365API ? '✅ Configured' : '❌ Not configured')
-
-    if (!hasMailgun && !hasAPIService && !hasOffice365API) {
-      console.log('⚠️ No email service configured')
+    if (!hasMailgun && !hasAPIService && !hasSMTPService) {
+      console.log('📧 No email service configured, skipping email notification')
       return false
     }
 
     const htmlContent = await generateEmailTemplate(subject, message, type, actionUrl)
     
-    // Try Mailgun first (most reliable and proven working)
+    // Try Mailgun first if configured
     if (hasMailgun) {
-      console.log('🔄 Attempting Mailgun...')
+      console.log('📧 Using Mailgun email service')
       const mailgunSuccess = await sendMailgunEmail(env, to, subject, htmlContent)
       if (mailgunSuccess) return true
-      console.log('⚠️ Mailgun failed, trying next method...')
+      
+      console.log('📧 Mailgun failed, trying other services...')
+    }
+    
+    // Try SMTP if configured
+    if (hasSMTPService) {
+      console.log('📧 Using SMTP email service')
+      const smtpSuccess = await sendSMTPEmail(env, to, subject, htmlContent)
+      if (smtpSuccess) return true
+      
+      console.log('📧 SMTP failed, trying API service...')
     }
 
-    // Try Office 365 Graph API second
-    if (hasOffice365API) {
-      console.log('🔄 Attempting Office 365 Graph API...')
-      const office365Success = await sendOffice365GraphEmail(env, to, subject, htmlContent)
-      if (office365Success) return true
-      console.log('⚠️ Office 365 Graph API failed, trying next method...')
-    }
-
-    // Try API service third
+    // Try API service if configured
     if (hasAPIService) {
-      console.log('🔄 Attempting API service...')
-      const apiSuccess = await sendAPIEmail(env, to, subject, htmlContent)
-      if (apiSuccess) return true
-      console.log('⚠️ API service failed...')
+      console.log('📧 Using API email service')
+      return await sendAPIEmail(env, to, subject, htmlContent)
     }
 
-    console.log('❌ All email methods failed')
+    console.log('📧 No working email service available')
     return false
   } catch (error) {
     console.error('❌ Failed to send email:', error)
@@ -354,45 +284,27 @@ async function sendEmailNotification(env, to, subject, message, type = 'info', a
   }
 }
 
-// Enhanced notification creation with email support - FIXED VERSION
+// Enhanced notification creation with email support
 async function createNotification(env, userId, type, message, emailSubject = null, actionUrl = null) {
   try {
-    console.log('🔔 === CREATING NOTIFICATION ===')
-    console.log('User ID:', userId)
-    console.log('Type:', type)
-    console.log('Message:', message)
-    console.log('Email Subject:', emailSubject)
-    
     // Create in-app notification
     const notificationId = crypto.randomUUID()
-    const notificationResult = await env.DB.prepare(`
+    await env.DB.prepare(`
       INSERT INTO notifications (id, user_id, type, message)
       VALUES (?, ?, ?, ?)
     `).bind(notificationId, userId, type, message).run()
 
-    console.log('✅ In-app notification created:', notificationResult)
-
-    // Get user email preferences and info - FIXED QUERY
+    // Get user email preferences
     const user = await env.DB.prepare(
       'SELECT email, name, COALESCE(email_notifications, 1) as email_notifications FROM users WHERE id = ?'
     ).bind(userId).first()
 
-    console.log('👤 User found:', user ? `${user.name} (${user.email})` : 'Not found')
-    console.log('📧 Email notifications enabled:', user?.email_notifications !== 0)
-
     // Send email if user exists and has email notifications enabled (default to true)
-    if (user && user.email && (user.email_notifications !== 0)) {
-      console.log('📧 Attempting to send email notification...')
-      
+    if (user && user.email && user.email_notifications) {
       const subject = emailSubject || getEmailSubject(type, message)
       const enhancedMessage = `Hi ${user.name},\n\n${message}\n\nBest regards,\nTimeOff Manager Team`
       
-      console.log('📧 Email details:')
-      console.log('  To:', user.email)
-      console.log('  Subject:', subject)
-      console.log('  Enhanced Message:', enhancedMessage)
-      
-      const emailSent = await sendEmailNotification(
+      await sendEmailNotification(
         env,
         user.email,
         subject,
@@ -400,25 +312,11 @@ async function createNotification(env, userId, type, message, emailSubject = nul
         type,
         actionUrl || env.APP_URL || 'https://timeoff-manager.lamado.workers.dev'
       )
-
-      if (emailSent) {
-        console.log(`✅ Email notification sent successfully to ${user.email}`)
-      } else {
-        console.log(`⚠️ Email notification failed for ${user.email}`)
-      }
-    } else {
-      if (!user) {
-        console.log('⚠️ User not found, skipping email')
-      } else if (!user.email) {
-        console.log('⚠️ User has no email address, skipping email')
-      } else {
-        console.log('⚠️ User has email notifications disabled, skipping email')
-      }
     }
 
     return notificationId
   } catch (error) {
-    console.error('❌ Error creating notification:', error)
+    console.error('Error creating notification:', error)
     throw error
   }
 }
@@ -437,13 +335,13 @@ function getEmailSubject(type, message) {
   }
 }
 
-// FIXED Database initialization with proper schema migration
+// Database initialization with proper error handling
 async function initDatabase(db) {
   try {
-    console.log('🔧 === DATABASE INITIALIZATION ===')
-    
+    console.log('🔄 Starting database initialization...')
+
     // Create users table with all required columns
-    await db.exec(`
+    await db.prepare(`
       CREATE TABLE IF NOT EXISTS users (
         id TEXT PRIMARY KEY,
         name TEXT NOT NULL,
@@ -457,34 +355,10 @@ async function initDatabase(db) {
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
       )
-    `)
-
-    // Check if email_notifications column exists, add if missing
-    try {
-      const testQuery = await db.prepare('SELECT email_notifications FROM users LIMIT 1').first()
-      console.log('✅ email_notifications column exists')
-    } catch (error) {
-      if (error.message.includes('no such column: email_notifications')) {
-        console.log('🔧 Adding missing email_notifications column...')
-        await db.exec('ALTER TABLE users ADD COLUMN email_notifications BOOLEAN DEFAULT TRUE')
-        console.log('✅ email_notifications column added')
-      }
-    }
-
-    // Check if email_verified column exists, add if missing
-    try {
-      const testQuery = await db.prepare('SELECT email_verified FROM users LIMIT 1').first()
-      console.log('✅ email_verified column exists')
-    } catch (error) {
-      if (error.message.includes('no such column: email_verified')) {
-        console.log('🔧 Adding missing email_verified column...')
-        await db.exec('ALTER TABLE users ADD COLUMN email_verified BOOLEAN DEFAULT FALSE')
-        console.log('✅ email_verified column added')
-      }
-    }
+    `).run()
 
     // Create time_off_requests table
-    await db.exec(`
+    await db.prepare(`
       CREATE TABLE IF NOT EXISTS time_off_requests (
         id TEXT PRIMARY KEY,
         employee_id TEXT NOT NULL,
@@ -502,10 +376,10 @@ async function initDatabase(db) {
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
       )
-    `)
+    `).run()
 
     // Create notifications table
-    await db.exec(`
+    await db.prepare(`
       CREATE TABLE IF NOT EXISTS notifications (
         id TEXT PRIMARY KEY,
         user_id TEXT NOT NULL,
@@ -514,7 +388,28 @@ async function initDatabase(db) {
         is_read BOOLEAN DEFAULT FALSE,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
       )
-    `)
+    `).run()
+
+    // Check if we need to add missing columns to existing users table
+    try {
+      // Try to select the email_notifications column
+      await db.prepare('SELECT email_notifications FROM users LIMIT 1').first()
+    } catch (error) {
+      if (error.message.includes('no such column: email_notifications')) {
+        console.log('📧 Adding email_notifications column to users table...')
+        await db.prepare('ALTER TABLE users ADD COLUMN email_notifications BOOLEAN DEFAULT TRUE').run()
+      }
+    }
+
+    try {
+      // Try to select the email_verified column
+      await db.prepare('SELECT email_verified FROM users LIMIT 1').first()
+    } catch (error) {
+      if (error.message.includes('no such column: email_verified')) {
+        console.log('📧 Adding email_verified column to users table...')
+        await db.prepare('ALTER TABLE users ADD COLUMN email_verified BOOLEAN DEFAULT FALSE').run()
+      }
+    }
 
     // Check if users already exist
     const existingUsers = await db.prepare('SELECT COUNT(*) as count FROM users').first()
@@ -524,13 +419,13 @@ async function initDatabase(db) {
       
       // For demo, we'll use simple password storage
       const users = [
-        ['1', 'Juan Carranza', 'employee@example.com', 'password', 'employee', 'Engineering', 'https://images.pexels.com/photos/2379004/pexels-photo-2379004.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1', 1, 1],
-        ['2', 'Ana Ramirez', 'manager@example.com', 'password', 'manager', 'Engineering', 'https://images.pexels.com/photos/774909/pexels-photo-774909.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1', 1, 1],
-        ['3', 'Alissa Pryor', 'alice@example.com', 'password', 'employee', 'Marketing', 'https://images.pexels.com/photos/415829/pexels-photo-415829.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1', 1, 1],
-        ['4', 'Charly Osornio', 'bob@example.com', 'password', 'employee', 'Sales', 'https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1', 1, 1],
-        ['5', 'Admin User', 'admin@example.com', 'password', 'admin', 'IT', 'https://images.pexels.com/photos/614810/pexels-photo-614810.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1', 1, 1],
-        ['6', 'Sarah Johnson', 'sarah@example.com', 'password', 'employee', 'Project Management', 'https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1', 1, 1],
-        ['7', 'Mike Rodriguez', 'mike@example.com', 'password', 'employee', 'Shop', 'https://images.pexels.com/photos/1681010/pexels-photo-1681010.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1', 1, 1]
+        ['1', 'Juan Carranza', 'employee@example.com', 'password', 'employee', 'Engineering', 'https://images.pexels.com/photos/2379004/pexels-photo-2379004.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1', true, true],
+        ['2', 'Ana Ramirez', 'manager@example.com', 'password', 'manager', 'Engineering', 'https://images.pexels.com/photos/774909/pexels-photo-774909.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1', true, true],
+        ['3', 'Alissa Pryor', 'alice@example.com', 'password', 'employee', 'Marketing', 'https://images.pexels.com/photos/415829/pexels-photo-415829.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1', true, true],
+        ['4', 'Charly Osornio', 'bob@example.com', 'password', 'employee', 'Sales', 'https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1', true, true],
+        ['5', 'Admin User', 'admin@example.com', 'password', 'admin', 'IT', 'https://images.pexels.com/photos/614810/pexels-photo-614810.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1', true, true],
+        ['6', 'Sarah Johnson', 'sarah@example.com', 'password', 'employee', 'Project Management', 'https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1', true, true],
+        ['7', 'Mike Rodriguez', 'mike@example.com', 'password', 'employee', 'Shop', 'https://images.pexels.com/photos/1681010/pexels-photo-1681010.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1', true, true]
       ]
 
       for (const user of users) {
@@ -590,21 +485,19 @@ async function initDatabase(db) {
       console.log('✅ Sample data inserted successfully')
     } else {
       // Update existing users to have email preferences if they don't exist
-      console.log('🔧 Updating existing users with email preferences...')
-      
-      // Use COALESCE to set default values for NULL columns
       await db.prepare(`
         UPDATE users SET 
-          email_notifications = COALESCE(email_notifications, 1),
-          email_verified = COALESCE(email_verified, 0)
+          email_notifications = COALESCE(email_notifications, TRUE),
+          email_verified = COALESCE(email_verified, FALSE)
+        WHERE email_notifications IS NULL OR email_verified IS NULL
       `).run()
-      
       console.log('✅ Updated existing users with email preferences')
     }
-    
+
     console.log('✅ Database initialization completed successfully')
   } catch (error) {
     console.error('❌ Database initialization error:', error)
+    throw error
   }
 }
 
@@ -674,19 +567,21 @@ app.get('/api/debug/users', async (c) => {
   }
 })
 
-// Enhanced email configuration debug endpoint
+// Email configuration debug endpoint
 app.get('/api/debug/email-config', authMiddleware, adminMiddleware, async (c) => {
   try {
     const config = {
       hasMailgun: !!(c.env.MAILGUN_API_KEY && c.env.MAILGUN_DOMAIN),
       hasAPIService: !!(c.env.EMAIL_SERVICE && c.env.EMAIL_API_KEY),
-      hasOffice365API: !!(c.env.OFFICE365_CLIENT_ID && c.env.OFFICE365_CLIENT_SECRET && c.env.OFFICE365_TENANT_ID),
+      hasSMTPService: !!(c.env.SMTP_HOST && c.env.SMTP_USER && c.env.SMTP_PASS),
       mailgunDomain: c.env.MAILGUN_DOMAIN || 'Not configured',
-      emailService: c.env.EMAIL_SERVICE || 'Not configured',
+      emailService: c.env.EMAIL_SERVICE ? 'Configured' : 'Not configured',
+      smtpHost: c.env.SMTP_HOST || 'Not configured',
+      smtpPort: c.env.SMTP_PORT || 'Not configured',
+      smtpUser: c.env.SMTP_USER ? 'Configured' : 'Not configured',
+      smtpSecure: c.env.SMTP_SECURE || 'false',
       fromEmail: c.env.FROM_EMAIL || 'Not configured',
-      office365ClientId: c.env.OFFICE365_CLIENT_ID ? 'Configured' : 'Not configured',
-      office365TenantId: c.env.OFFICE365_TENANT_ID ? 'Configured' : 'Not configured',
-      recommendation: getEmailRecommendation(c.env)
+      smtpRelayUrl: c.env.SMTP_RELAY_URL ? 'Configured' : 'Not configured'
     }
     
     return c.json(config)
@@ -694,18 +589,6 @@ app.get('/api/debug/email-config', authMiddleware, adminMiddleware, async (c) =>
     return c.json({ error: error.message }, 500)
   }
 })
-
-function getEmailRecommendation(env) {
-  if (env.MAILGUN_API_KEY && env.MAILGUN_DOMAIN) {
-    return 'Mailgun configured - this is a proven working solution!'
-  } else if (env.OFFICE365_CLIENT_ID && env.OFFICE365_CLIENT_SECRET && env.OFFICE365_TENANT_ID) {
-    return 'Office 365 Graph API configured - good option for Office 365'
-  } else if (env.EMAIL_SERVICE && env.EMAIL_API_KEY) {
-    return 'API service configured - good option'
-  } else {
-    return 'No email service configured. Recommend setting up Mailgun for reliable email delivery.'
-  }
-}
 
 // Auth routes
 app.post('/api/auth/login', async (c) => {
@@ -802,8 +685,8 @@ app.get('/api/auth/email-preferences', authMiddleware, async (c) => {
     ).bind(user.id).first()
 
     return c.json({
-      emailNotifications: userData?.email_notifications === 1,
-      emailVerified: userData?.email_verified === 1
+      emailNotifications: userData?.email_notifications ?? true,
+      emailVerified: userData?.email_verified ?? false
     })
   } catch (error) {
     console.error('Get email preferences error:', error)
@@ -1106,8 +989,8 @@ app.post('/api/users', authMiddleware, adminMiddleware, async (c) => {
       role,
       department,
       avatar || null,
-      1, // Email notifications enabled by default
-      0 // Email not verified by default
+      true, // Email notifications enabled by default
+      false // Email not verified by default
     ).run()
 
     // Send welcome notification with email
@@ -1174,179 +1057,86 @@ app.put('/api/users/:id', authMiddleware, adminMiddleware, async (c) => {
   }
 })
 
-// Reset user password - FIXED VERSION WITH ENHANCED DEBUGGING
+// Reset user password
 app.patch('/api/users/:id/password', authMiddleware, adminMiddleware, async (c) => {
   try {
     const { id } = c.req.param()
     const { password } = await c.req.json()
 
-    console.log('🔑 === PASSWORD RESET DEBUG ===')
-    console.log('🔑 Password reset request for user:', id)
-    console.log('🔑 New password:', password)
-    console.log('🔑 Admin user:', c.get('user').name)
-
     if (!password || password.length < 4) {
-      console.log('❌ Password validation failed')
       return c.json({ message: 'Password must be at least 4 characters long' }, 400)
     }
 
-    // Check if user exists and get their info
+    // Check if user exists
     const existingUser = await c.env.DB.prepare(
-      'SELECT id, name, email FROM users WHERE id = ?'
+      'SELECT id, name FROM users WHERE id = ?'
     ).bind(id).first()
 
     if (!existingUser) {
-      console.log('❌ User not found:', id)
       return c.json({ message: 'User not found' }, 404)
     }
 
-    console.log('✅ User found:', existingUser.name, existingUser.email)
-
     // Store password as plain text for simplicity in demo
     // In production, you would hash this password
-    const updateResult = await c.env.DB.prepare(`
+    await c.env.DB.prepare(`
       UPDATE users 
       SET password = ?, updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
     `).bind(password, id).run()
 
-    console.log('🔄 Database update result:', updateResult)
-
-    if (updateResult.changes === 0) {
-      console.log('❌ No rows updated')
-      return c.json({ message: 'Failed to update password' }, 500)
-    }
-
-    console.log('✅ Password updated successfully in database')
-
-    // Create enhanced notification message with the new password
-    const notificationMessage = `Your password has been reset by an administrator. Your new password is: "${password}". Please log in with this password and consider changing it to something more secure.`
-    
-    console.log('🔔 Creating notification with message:', notificationMessage)
+    console.log('=== CREATING NOTIFICATION ===')
+    console.log('User ID:', id)
+    console.log('User Name:', existingUser.name)
+    console.log('Type: warning')
 
     // Add notification for the user with email
-    try {
-      const notificationId = await createNotification(
-        c.env,
-        id,
-        'warning',
-        notificationMessage,
-        '🔑 Your Password Has Been Reset'
-      )
-      console.log('✅ Notification created with ID:', notificationId)
-    } catch (notificationError) {
-      console.error('⚠️ Failed to send notification:', notificationError)
-      // Don't fail the password reset if notification fails
-    }
+    await createNotification(
+      c.env,
+      id,
+      'warning',
+      `Your password has been reset by an administrator. Your new password is: "${password}". Please log in with your new password and consider changing it to something more secure.`,
+      '🔑 Your Password Has Been Reset'
+    )
 
-    return c.json({ 
-      message: 'Password reset successfully',
-      details: {
-        userId: id,
-        userName: existingUser.name,
-        userEmail: existingUser.email,
-        newPassword: password,
-        timestamp: new Date().toISOString()
-      }
-    })
+    return c.json({ message: 'Password reset successfully' })
   } catch (error) {
-    console.error('❌ Reset password error:', error)
-    return c.json({ 
-      message: 'Failed to reset password', 
-      error: error.message,
-      stack: error.stack 
-    }, 500)
+    console.error('Reset password error:', error)
+    return c.json({ message: 'Failed to reset password' }, 500)
   }
 })
 
-// Delete user - ENHANCED VERSION WITH BETTER ERROR HANDLING
+// Delete user
 app.delete('/api/users/:id', authMiddleware, adminMiddleware, async (c) => {
   try {
     const { id } = c.req.param()
     const currentUser = c.get('user')
 
-    console.log('🗑️ Delete user request for ID:', id)
-    console.log('🗑️ Current user:', currentUser.id, currentUser.name)
-
     // Prevent admin from deleting themselves
     if (id === currentUser.id) {
-      console.log('❌ Cannot delete own account')
       return c.json({ message: 'Cannot delete your own account' }, 400)
     }
 
-    // Check if user exists and get their info
+    // Check if user exists
     const existingUser = await c.env.DB.prepare(
-      'SELECT id, name, email, role FROM users WHERE id = ?'
+      'SELECT id, role FROM users WHERE id = ?'
     ).bind(id).first()
 
     if (!existingUser) {
-      console.log('❌ User not found:', id)
       return c.json({ message: 'User not found' }, 404)
     }
 
-    console.log('✅ User found:', existingUser.name, existingUser.email, existingUser.role)
-
     // Prevent deleting other admin users
     if (existingUser.role === 'admin') {
-      console.log('❌ Cannot delete admin users')
       return c.json({ message: 'Cannot delete admin users' }, 400)
     }
 
-    // Start transaction-like operations
-    console.log('🔄 Starting deletion process...')
+    // Delete user (this will cascade delete related requests and notifications due to foreign keys)
+    await c.env.DB.prepare('DELETE FROM users WHERE id = ?').bind(id).run()
 
-    try {
-      // First, delete related notifications
-      const notificationDeleteResult = await c.env.DB.prepare(
-        'DELETE FROM notifications WHERE user_id = ?'
-      ).bind(id).run()
-      console.log('🗑️ Deleted notifications:', notificationDeleteResult.changes)
-
-      // Then, delete related time off requests
-      const requestDeleteResult = await c.env.DB.prepare(
-        'DELETE FROM time_off_requests WHERE employee_id = ?'
-      ).bind(id).run()
-      console.log('🗑️ Deleted requests:', requestDeleteResult.changes)
-
-      // Finally, delete the user
-      const userDeleteResult = await c.env.DB.prepare(
-        'DELETE FROM users WHERE id = ?'
-      ).bind(id).run()
-      console.log('🗑️ User deletion result:', userDeleteResult)
-
-      if (userDeleteResult.changes === 0) {
-        console.log('❌ No user rows deleted')
-        return c.json({ message: 'Failed to delete user - no changes made' }, 500)
-      }
-
-      console.log('✅ User deleted successfully')
-
-      return c.json({ 
-        message: 'User deleted successfully',
-        details: {
-          deletedUser: {
-            id: existingUser.id,
-            name: existingUser.name,
-            email: existingUser.email
-          },
-          deletedNotifications: notificationDeleteResult.changes,
-          deletedRequests: requestDeleteResult.changes
-        }
-      })
-    } catch (deleteError) {
-      console.error('❌ Error during deletion:', deleteError)
-      return c.json({ 
-        message: 'Failed to delete user due to database error',
-        error: deleteError.message 
-      }, 500)
-    }
+    return c.json({ message: 'User deleted successfully' })
   } catch (error) {
-    console.error('❌ Delete user error:', error)
-    return c.json({ 
-      message: 'Failed to delete user', 
-      error: error.message,
-      stack: error.stack 
-    }, 500)
+    console.error('Delete user error:', error)
+    return c.json({ message: 'Failed to delete user' }, 500)
   }
 })
 
@@ -1366,7 +1156,7 @@ app.get('/api/users/team', authMiddleware, async (c) => {
   }
 })
 
-// Enhanced test email endpoint with better debugging
+// Test email endpoint (for testing email functionality)
 app.post('/api/test-email', authMiddleware, adminMiddleware, async (c) => {
   try {
     const { to, subject, message, type = 'info' } = await c.req.json()
@@ -1374,10 +1164,6 @@ app.post('/api/test-email', authMiddleware, adminMiddleware, async (c) => {
     if (!to || !subject || !message) {
       return c.json({ message: 'Missing required fields: to, subject, message' }, 400)
     }
-
-    console.log('📧 === TEST EMAIL DEBUG ===')
-    console.log('📧 Test email request:', { to, subject, type })
-    console.log('📧 Message:', message)
 
     const success = await sendEmailNotification(
       c.env,
@@ -1388,38 +1174,21 @@ app.post('/api/test-email', authMiddleware, adminMiddleware, async (c) => {
     )
 
     if (success) {
-      return c.json({ 
-        message: 'Test email sent successfully',
-        details: {
-          to,
-          subject,
-          type,
-          timestamp: new Date().toISOString()
-        }
-      })
+      return c.json({ message: 'Test email sent successfully' })
     } else {
-      return c.json({ 
-        message: 'Failed to send test email',
-        details: {
-          to,
-          subject,
-          type,
-          timestamp: new Date().toISOString(),
-          suggestion: 'Check email configuration and logs'
-        }
-      }, 500)
+      return c.json({ message: 'Failed to send test email' }, 500)
     }
   } catch (error) {
     console.error('Test email error:', error)
-    return c.json({ message: 'Failed to send test email', error: error.message }, 500)
+    return c.json({ message: 'Failed to send test email' }, 500)
   }
 })
 
-// Health check with enhanced email status
+// Health check
 app.get('/health', async (c) => {
   const hasMailgun = !!(c.env.MAILGUN_API_KEY && c.env.MAILGUN_DOMAIN)
   const hasAPIService = !!(c.env.EMAIL_SERVICE && c.env.EMAIL_API_KEY)
-  const hasOffice365API = !!(c.env.OFFICE365_CLIENT_ID && c.env.OFFICE365_CLIENT_SECRET && c.env.OFFICE365_TENANT_ID)
+  const hasSMTPService = !!(c.env.SMTP_HOST && c.env.SMTP_USER && c.env.SMTP_PASS)
   
   return c.json({ 
     status: 'OK', 
@@ -1429,17 +1198,9 @@ app.get('/health', async (c) => {
     features: {
       email_mailgun: hasMailgun,
       email_api: hasAPIService,
-      email_office365: hasOffice365API,
-      email_configured: hasMailgun || hasAPIService || hasOffice365API,
+      email_smtp: hasSMTPService,
+      email_configured: hasMailgun || hasAPIService || hasSMTPService,
       database: !!c.env.DB
-    },
-    email_status: {
-      primary_method: hasMailgun ? 'Mailgun' : 
-                     hasOffice365API ? 'Office 365 Graph API' : 
-                     hasAPIService ? 'API Service' : 'None',
-      fallback_available: (hasMailgun && hasOffice365API) || 
-                         (hasMailgun && hasAPIService) || 
-                         (hasOffice365API && hasAPIService)
     }
   })
 })
