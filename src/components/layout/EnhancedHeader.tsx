@@ -203,10 +203,10 @@ const EnhancedHeader: React.FC<EnhancedHeaderProps> = ({ openSidebar }) => {
         </div>
       </div>
 
-      {/* Avatar Update Modal */}
+      {/* Avatar Update Modal - Fixed positioning */}
       {showAvatarModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 animate-fade-in">
-          <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl animate-scale-in">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 animate-fade-in p-4">
+          <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl animate-scale-in mx-4 my-8 max-h-[90vh] overflow-y-auto">
             <h2 className="mb-6 text-lg font-semibold text-gray-900">Update Profile Picture</h2>
             
             <div className="flex flex-col items-center space-y-6">
