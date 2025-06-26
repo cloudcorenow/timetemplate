@@ -8,10 +8,18 @@ binding = "DB"
 database_name = "timeoff-manager-db"
 database_id = "95ef3d44-4b8f-4802-97bd-8e50861e5f49"
 
+# Custom domain routes - this should handle your sapphireapp.site domain
+[env.production]
+name = "timeoff-manager"
+routes = [
+  { pattern = "sapphireapp.site/*", zone_name = "sapphireapp.site" },
+  { pattern = "timeoff-manager.lamado.workers.dev/*" }
+]
+
 [vars]
 NODE_ENV = "production"
-APP_URL = "https://timeoff-manager.lamado.workers.dev"
-FROM_EMAIL = "noreply@timeoff-manager.com"
+APP_URL = "https://sapphireapp.site"
+FROM_EMAIL = "noreply@sapphireapp.site"
 
 # Email service configuration (set these as secrets)
 # Option 1: API-based services (Resend, SendGrid, etc.)
@@ -25,12 +33,6 @@ FROM_EMAIL = "noreply@timeoff-manager.com"
 # SMTP_PASS = "your-app-password"           # set as secret
 # SMTP_SECURE = "false"                     # set as secret (true for port 465, false for 587)
 # SMTP_RELAY_URL = "https://your-smtp-relay.com/send"  # optional: custom SMTP relay service
-
-[env.production]
-name = "timeoff-manager-prod"
-
-[env.staging]
-name = "timeoff-manager-staging"
 
 # Static assets configuration
 [assets]
