@@ -287,12 +287,6 @@ async function sendEmailNotification(env, to, subject, message, type = 'info', a
 // Enhanced notification creation with email support
 async function createNotification(env, userId, type, message, emailSubject = null, actionUrl = null) {
   try {
-    console.log('=== CREATING NOTIFICATION ===')
-    console.log('User ID:', userId)
-    console.log('Type:', type)
-    console.log('Message:', message)
-    console.log('Email Subject:', emailSubject)
-
     // Create in-app notification
     const notificationId = crypto.randomUUID()
     await env.DB.prepare(`
@@ -300,29 +294,17 @@ async function createNotification(env, userId, type, message, emailSubject = nul
       VALUES (?, ?, ?, ?)
     `).bind(notificationId, userId, type, message).run()
 
-    console.log('✅ In-app notification created:', notificationId)
-
     // Get user email preferences
     const user = await env.DB.prepare(
       'SELECT email, name, COALESCE(email_notifications, 1) as email_notifications FROM users WHERE id = ?'
     ).bind(userId).first()
-
-    console.log('User found:', user ? 'Yes' : 'No')
-    if (user) {
-      console.log('User email:', user.email)
-      console.log('Email notifications enabled:', user.email_notifications)
-    }
 
     // Send email if user exists and has email notifications enabled (default to true)
     if (user && user.email && user.email_notifications) {
       const subject = emailSubject || getEmailSubject(type, message)
       const enhancedMessage = `Hi ${user.name},\n\n${message}\n\nBest regards,\nTimeOff Manager Team`
       
-      console.log('📧 Attempting to send email...')
-      console.log('To:', user.email)
-      console.log('Subject:', subject)
-      
-      const emailSent = await sendEmailNotification(
+      await sendEmailNotification(
         env,
         user.email,
         subject,
@@ -330,15 +312,11 @@ async function createNotification(env, userId, type, message, emailSubject = nul
         type,
         actionUrl || env.APP_URL || 'https://timeoff-manager.lamado.workers.dev'
       )
-      
-      console.log('Email sent successfully:', emailSent)
-    } else {
-      console.log('📧 Email not sent - user not found, no email, or notifications disabled')
     }
 
     return notificationId
   } catch (error) {
-    console.error('❌ Error creating notification:', error)
+    console.error('Error creating notification:', error)
     throw error
   }
 }
@@ -359,10 +337,14 @@ function getEmailSubject(type, message) {
   }
 }
 
-// Database initialization with proper error handling
+// Database initialization - only run once
+let dbInitialized = false
+
 async function initDatabase(db) {
+  if (dbInitialized) return
+  
   try {
-    console.log('🔄 Starting database initialization...')
+    console.log('🔄 Initializing database...')
 
     // Create users table with all required columns
     await db.prepare(`
@@ -416,21 +398,17 @@ async function initDatabase(db) {
 
     // Check if we need to add missing columns to existing users table
     try {
-      // Try to select the email_notifications column
       await db.prepare('SELECT email_notifications FROM users LIMIT 1').first()
     } catch (error) {
       if (error.message.includes('no such column: email_notifications')) {
-        console.log('📧 Adding email_notifications column to users table...')
         await db.prepare('ALTER TABLE users ADD COLUMN email_notifications BOOLEAN DEFAULT TRUE').run()
       }
     }
 
     try {
-      // Try to select the email_verified column
       await db.prepare('SELECT email_verified FROM users LIMIT 1').first()
     } catch (error) {
       if (error.message.includes('no such column: email_verified')) {
-        console.log('📧 Adding email_verified column to users table...')
         await db.prepare('ALTER TABLE users ADD COLUMN email_verified BOOLEAN DEFAULT FALSE').run()
       }
     }
@@ -441,7 +419,7 @@ async function initDatabase(db) {
     if (existingUsers.count === 0) {
       console.log('📝 Inserting sample users...')
       
-      // For demo, we'll use simple password storage
+      // Insert sample users with correct admin email
       const users = [
         ['1', 'Juan Carranza', 'employee@example.com', 'password', 'employee', 'Engineering', 'https://images.pexels.com/photos/2379004/pexels-photo-2379004.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1', true, true],
         ['2', 'Ana Ramirez', 'manager@example.com', 'password', 'manager', 'Engineering', 'https://images.pexels.com/photos/774909/pexels-photo-774909.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1', true, true],
@@ -501,18 +479,13 @@ async function initDatabase(db) {
 
       console.log('✅ Sample data inserted successfully')
     } else {
-      // ALWAYS update admin user email to it@sapphiremfg.com
-      console.log('🔄 Updating admin user email to it@sapphiremfg.com...')
-      
-      const updateResult = await db.prepare(`
-        UPDATE users SET email = ? WHERE role = "admin"
-      `).bind('it@sapphiremfg.com').run()
-      
-      console.log('✅ Admin email update result:', updateResult)
-      
-      // Verify the update worked
+      // Only update admin email if it's still the old one
       const adminUser = await db.prepare('SELECT email FROM users WHERE role = "admin"').first()
-      console.log('✅ Admin user email is now:', adminUser?.email)
+      if (adminUser && adminUser.email === 'admin@example.com') {
+        console.log('🔄 Updating admin user email to it@sapphiremfg.com...')
+        await db.prepare('UPDATE users SET email = ? WHERE role = "admin"').bind('it@sapphiremfg.com').run()
+        console.log('✅ Admin email updated')
+      }
 
       // Update existing users to have email preferences if they don't exist
       await db.prepare(`
@@ -521,10 +494,10 @@ async function initDatabase(db) {
           email_verified = COALESCE(email_verified, FALSE)
         WHERE email_notifications IS NULL OR email_verified IS NULL
       `).run()
-      console.log('✅ Updated existing users with email preferences')
     }
 
-    console.log('✅ Database initialization completed successfully')
+    dbInitialized = true
+    console.log('✅ Database initialization completed')
   } catch (error) {
     console.error('❌ Database initialization error:', error)
     throw error
@@ -579,9 +552,9 @@ const managerOrAdminMiddleware = async (c, next) => {
   await next()
 }
 
-// Initialize database middleware
+// Initialize database middleware - only run once
 app.use('*', async (c, next) => {
-  if (c.env.DB) {
+  if (c.env.DB && !dbInitialized) {
     await initDatabase(c.env.DB)
   }
   await next()
@@ -590,16 +563,7 @@ app.use('*', async (c, next) => {
 // Debug endpoint to check users
 app.get('/api/debug/users', async (c) => {
   try {
-    console.log('=== DEBUG USERS ENDPOINT ===')
-    console.log('Request URL:', c.req.url)
-    console.log('Request Host:', c.req.header('host'))
-    
     const users = await c.env.DB.prepare('SELECT id, email, role, password FROM users').all()
-    console.log('Users found:', users.results.length)
-    
-    users.results.forEach(user => {
-      console.log(`User: ${user.email} (${user.role}) - Password: ${user.password}`)
-    })
     
     return c.json({
       host: c.req.header('host'),
@@ -645,56 +609,26 @@ app.post('/api/auth/login', async (c) => {
   try {
     const { email, password } = await c.req.json()
     
-    console.log('=== LOGIN ATTEMPT ===')
-    console.log('Request URL:', c.req.url)
-    console.log('Request Host:', c.req.header('host'))
-    console.log('Email:', email)
-    console.log('Password:', password)
-    
     if (!email || !password) {
-      console.log('❌ Missing email or password')
       return c.json({ message: 'Email and password are required' }, 400)
     }
-
-    // First, let's see all users in the database
-    const allUsers = await c.env.DB.prepare('SELECT email, role FROM users').all()
-    console.log('All users in database:')
-    allUsers.results.forEach(u => console.log(`  - ${u.email} (${u.role})`))
 
     const user = await c.env.DB.prepare(
       'SELECT * FROM users WHERE email = ?'
     ).bind(email.toLowerCase()).first()
 
-    console.log('User lookup result:', user ? 'FOUND' : 'NOT FOUND')
-    if (user) {
-      console.log('Found user:', {
-        id: user.id,
-        email: user.email,
-        role: user.role,
-        passwordInDB: user.password
-      })
-    }
-
     if (!user) {
-      console.log('❌ User not found for email:', email)
       return c.json({ message: 'Invalid credentials' }, 401)
     }
 
-    console.log('Password verification:')
-    console.log('  Input password:', password)
-    console.log('  Stored password:', user.password)
-
     const isValidPassword = await verifyPassword(password, user.password)
-    console.log('  Password valid:', isValidPassword)
     
     if (!isValidPassword) {
-      console.log('❌ Invalid password')
       return c.json({ message: 'Invalid credentials' }, 401)
     }
 
     // Generate JWT token
     const token = await sign({ userId: user.id }, JWT_SECRET)
-    console.log('✅ Login successful, token generated')
 
     // Remove password from response
     const { password: _, ...userWithoutPassword } = user
@@ -704,7 +638,7 @@ app.post('/api/auth/login', async (c) => {
       token
     })
   } catch (error) {
-    console.error('❌ Login error:', error)
+    console.error('Login error:', error)
     return c.json({ message: 'Internal server error' }, 500)
   }
 })
@@ -1050,13 +984,6 @@ app.post('/api/users', authMiddleware, adminMiddleware, async (c) => {
 
     const userId = crypto.randomUUID()
 
-    console.log('=== CREATING NEW USER ===')
-    console.log('User ID:', userId)
-    console.log('Name:', name)
-    console.log('Email:', email)
-    console.log('Role:', role)
-    console.log('Department:', department)
-
     await c.env.DB.prepare(`
       INSERT INTO users (id, name, email, password, role, department, avatar, email_notifications, email_verified)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -1072,10 +999,7 @@ app.post('/api/users', authMiddleware, adminMiddleware, async (c) => {
       false // Email not verified by default
     ).run()
 
-    console.log('✅ User created in database')
-
     // Send welcome notification with email
-    console.log('📧 Creating welcome notification...')
     await createNotification(
       c.env,
       userId,
@@ -1086,7 +1010,7 @@ app.post('/api/users', authMiddleware, adminMiddleware, async (c) => {
 
     return c.json({ message: 'User created successfully', id: userId }, 201)
   } catch (error) {
-    console.error('❌ Create user error:', error)
+    console.error('Create user error:', error)
     return c.json({ message: 'Failed to create user' }, 500)
   }
 })
@@ -1166,11 +1090,6 @@ app.patch('/api/users/:id/password', authMiddleware, adminMiddleware, async (c) 
       WHERE id = ?
     `).bind(password, id).run()
 
-    console.log('=== CREATING NOTIFICATION ===')
-    console.log('User ID:', id)
-    console.log('User Name:', existingUser.name)
-    console.log('Type: warning')
-
     // Add notification for the user with email
     await createNotification(
       c.env,
@@ -1246,12 +1165,6 @@ app.post('/api/test-email', authMiddleware, adminMiddleware, async (c) => {
     if (!to || !subject || !message) {
       return c.json({ message: 'Missing required fields: to, subject, message' }, 400)
     }
-
-    console.log('=== SENDING TEST EMAIL ===')
-    console.log('To:', to)
-    console.log('Subject:', subject)
-    console.log('Message:', message)
-    console.log('Type:', type)
 
     const success = await sendEmailNotification(
       c.env,
