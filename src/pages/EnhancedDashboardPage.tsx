@@ -11,6 +11,7 @@ import GradientBackground from '../components/ui/GradientBackground';
 import Button from '../components/ui/Button';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
 import PayrollNotificationBanner from '../components/dashboard/PayrollNotificationBanner';
+import SystemLogsBanner from '../components/dashboard/SystemLogsBanner';
 
 const EnhancedDashboardPage: React.FC = () => {
   const { user, isManager, isAdmin } = useAuth();
@@ -150,6 +151,11 @@ const EnhancedDashboardPage: React.FC = () => {
             )}
           </div>
         </div>
+
+        {/* System Logs Banner - Only show for admins */}
+        {isAdmin && (
+          <SystemLogsBanner />
+        )}
 
         {/* Payroll Notification Banner - Only show for admins and managers */}
         {(isAdmin || isManager) && (

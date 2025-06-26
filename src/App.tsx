@@ -22,6 +22,7 @@ import ResponsiveLayout from './components/layout/ResponsiveLayout';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import MobileOptimizations from './components/mobile/MobileOptimizations';
 import ToastContainer from './components/ui/ToastContainer';
+import ClientLogsPanel from './components/layout/ClientLogsPanel';
 
 // Context
 import { AuthProvider } from './context/AuthContext';
@@ -61,6 +62,9 @@ function AppContent() {
         </Routes>
       </Router>
       <ToastContainer toasts={toasts} onClose={removeToast} />
+      
+      {/* Client Logs Panel - Only in development mode */}
+      {process.env.NODE_ENV === 'development' && <ClientLogsPanel />}
     </>
   );
 }

@@ -7,6 +7,7 @@ import { useCapacitor } from '../../hooks/useCapacitor';
 import EnhancedHeader from './EnhancedHeader';
 import Sidebar from './Sidebar';
 import CacheDebugPanel from '../debug/CacheDebugPanel';
+import ClientLogsPanel from './ClientLogsPanel';
 
 // Mobile Layout
 import MobileLayout from '../mobile/MobileLayout';
@@ -25,7 +26,7 @@ const ResponsiveLayout: React.FC = () => {
     return <MobileLayout />;
   }
 
-  // Desktop Layout - Always light mode
+  // Desktop Layout
   return (
     <div className="flex h-screen bg-gray-50">
       {/* Mobile sidebar overlay */}
@@ -47,8 +48,13 @@ const ResponsiveLayout: React.FC = () => {
         </main>
       </div>
 
-      {/* Cache Debug Panel (only in development) */}
-      {process.env.NODE_ENV === 'development' && <CacheDebugPanel />}
+      {/* Debug Panels - only in development */}
+      {process.env.NODE_ENV === 'development' && (
+        <>
+          <CacheDebugPanel />
+          <ClientLogsPanel />
+        </>
+      )}
     </div>
   );
 };
