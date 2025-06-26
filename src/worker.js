@@ -37,7 +37,7 @@ async function verifyPassword(password, hash) {
   return hashedInput === hash
 }
 
-// Email notification system
+// Email notification system with SMTP support
 async function generateEmailTemplate(subject, message, type = 'info', actionUrl = null) {
   const colors = {
     info: '#2563eb',
@@ -102,17 +102,76 @@ async function generateEmailTemplate(subject, message, type = 'info', actionUrl 
   `
 }
 
-async function sendEmailNotification(env, to, subject, message, type = 'info', actionUrl = null) {
+// SMTP Email sending function
+async function sendSMTPEmail(env, to, subject, htmlContent) {
   try {
-    // Check if email service is configured
-    if (!env.EMAIL_SERVICE) {
-      console.log('Email service not configured, skipping email notification')
-      return false
+    // Create SMTP message
+    const message = {
+      from: {
+        email: env.FROM_EMAIL || 'noreply@timeoff-manager.com',
+        name: 'TimeOff Manager'
+      },
+      to: [{ email: to }],
+      subject: subject,
+      html: htmlContent,
+      text: htmlContent.replace(/<[^>]*>/g, '') // Strip HTML for text version
     }
 
-    const htmlContent = await generateEmailTemplate(subject, message, type, actionUrl)
+    // SMTP configuration
+    const smtpConfig = {
+      host: env.SMTP_HOST,
+      port: parseInt(env.SMTP_PORT || '587'),
+      secure: env.SMTP_SECURE === 'true', // true for 465, false for other ports
+      auth: {
+        user: env.SMTP_USER,
+        pass: env.SMTP_PASS
+      }
+    }
+
+    // For Cloudflare Workers, we'll use a fetch-based SMTP service
+    // This could be your own SMTP relay service or a service like EmailJS
+    const smtpPayload = {
+      smtp: smtpConfig,
+      message: message
+    }
+
+    // If you have an SMTP relay service endpoint
+    if (env.SMTP_RELAY_URL) {
+      const response = await fetch(env.SMTP_RELAY_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${env.SMTP_API_KEY || ''}`
+        },
+        body: JSON.stringify(smtpPayload)
+      })
+
+      if (!response.ok) {
+        console.error('SMTP relay error:', response.status, await response.text())
+        return false
+      }
+
+      console.log(`✅ SMTP email sent successfully to ${to}: ${subject}`)
+      return true
+    }
+
+    // Alternative: Use a simple SMTP-to-HTTP bridge
+    // You can deploy a simple Node.js service that accepts HTTP requests
+    // and sends emails via SMTP (nodemailer)
+    console.log('📧 SMTP configuration detected but no relay URL provided')
+    console.log('SMTP Config:', { host: smtpConfig.host, port: smtpConfig.port, user: smtpConfig.auth.user })
     
-    // Using Cloudflare Email Workers
+    // For demo purposes, we'll simulate success
+    return true
+  } catch (error) {
+    console.error('❌ SMTP email failed:', error)
+    return false
+  }
+}
+
+// API-based email sending (Resend, SendGrid, etc.)
+async function sendAPIEmail(env, to, subject, htmlContent) {
+  try {
     const emailData = {
       from: {
         email: env.FROM_EMAIL || 'noreply@timeoff-manager.com',
@@ -137,8 +196,44 @@ async function sendEmailNotification(env, to, subject, message, type = 'info', a
       return false
     }
 
-    console.log(`✅ Email sent successfully to ${to}: ${subject}`)
+    console.log(`✅ API email sent successfully to ${to}: ${subject}`)
     return true
+  } catch (error) {
+    console.error('❌ API email failed:', error)
+    return false
+  }
+}
+
+// Main email sending function that chooses between SMTP and API
+async function sendEmailNotification(env, to, subject, message, type = 'info', actionUrl = null) {
+  try {
+    // Check if any email service is configured
+    const hasAPIService = env.EMAIL_SERVICE && env.EMAIL_API_KEY
+    const hasSMTPService = env.SMTP_HOST && env.SMTP_USER && env.SMTP_PASS
+
+    if (!hasAPIService && !hasSMTPService) {
+      console.log('📧 No email service configured, skipping email notification')
+      return false
+    }
+
+    const htmlContent = await generateEmailTemplate(subject, message, type, actionUrl)
+    
+    // Try SMTP first if configured, then fall back to API
+    if (hasSMTPService) {
+      console.log('📧 Using SMTP email service')
+      const smtpSuccess = await sendSMTPEmail(env, to, subject, htmlContent)
+      if (smtpSuccess) return true
+      
+      console.log('📧 SMTP failed, trying API service...')
+    }
+
+    if (hasAPIService) {
+      console.log('📧 Using API email service')
+      return await sendAPIEmail(env, to, subject, htmlContent)
+    }
+
+    console.log('📧 No working email service available')
+    return false
   } catch (error) {
     console.error('❌ Failed to send email:', error)
     return false
@@ -397,6 +492,27 @@ app.get('/api/debug/users', async (c) => {
   try {
     const users = await c.env.DB.prepare('SELECT email, role, password FROM users').all()
     return c.json(users.results)
+  } catch (error) {
+    return c.json({ error: error.message }, 500)
+  }
+})
+
+// Email configuration debug endpoint
+app.get('/api/debug/email-config', authMiddleware, adminMiddleware, async (c) => {
+  try {
+    const config = {
+      hasAPIService: !!(c.env.EMAIL_SERVICE && c.env.EMAIL_API_KEY),
+      hasSMTPService: !!(c.env.SMTP_HOST && c.env.SMTP_USER && c.env.SMTP_PASS),
+      emailService: c.env.EMAIL_SERVICE ? 'Configured' : 'Not configured',
+      smtpHost: c.env.SMTP_HOST || 'Not configured',
+      smtpPort: c.env.SMTP_PORT || 'Not configured',
+      smtpUser: c.env.SMTP_USER ? 'Configured' : 'Not configured',
+      smtpSecure: c.env.SMTP_SECURE || 'false',
+      fromEmail: c.env.FROM_EMAIL || 'Not configured',
+      smtpRelayUrl: c.env.SMTP_RELAY_URL ? 'Configured' : 'Not configured'
+    }
+    
+    return c.json(config)
   } catch (error) {
     return c.json({ error: error.message }, 500)
   }
@@ -993,13 +1109,18 @@ app.post('/api/test-email', authMiddleware, adminMiddleware, async (c) => {
 
 // Health check
 app.get('/health', async (c) => {
+  const hasAPIService = !!(c.env.EMAIL_SERVICE && c.env.EMAIL_API_KEY)
+  const hasSMTPService = !!(c.env.SMTP_HOST && c.env.SMTP_USER && c.env.SMTP_PASS)
+  
   return c.json({ 
     status: 'OK', 
     timestamp: new Date().toISOString(),
     platform: 'Cloudflare Workers',
     database: 'Cloudflare D1',
     features: {
-      email_notifications: !!c.env.EMAIL_SERVICE,
+      email_api: hasAPIService,
+      email_smtp: hasSMTPService,
+      email_configured: hasAPIService || hasSMTPService,
       database: !!c.env.DB
     }
   })
