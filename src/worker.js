@@ -1156,46 +1156,79 @@ app.put('/api/users/:id', authMiddleware, adminMiddleware, async (c) => {
   }
 })
 
-// Reset user password
+// Reset user password - FIXED VERSION
 app.patch('/api/users/:id/password', authMiddleware, adminMiddleware, async (c) => {
   try {
     const { id } = c.req.param()
     const { password } = await c.req.json()
 
+    console.log('🔑 Password reset request for user:', id)
+    console.log('🔑 New password:', password)
+
     if (!password || password.length < 4) {
+      console.log('❌ Password validation failed')
       return c.json({ message: 'Password must be at least 4 characters long' }, 400)
     }
 
-    // Check if user exists
+    // Check if user exists and get their info
     const existingUser = await c.env.DB.prepare(
-      'SELECT id, name FROM users WHERE id = ?'
+      'SELECT id, name, email FROM users WHERE id = ?'
     ).bind(id).first()
 
     if (!existingUser) {
+      console.log('❌ User not found:', id)
       return c.json({ message: 'User not found' }, 404)
     }
 
+    console.log('✅ User found:', existingUser.name, existingUser.email)
+
     // Store password as plain text for simplicity in demo
     // In production, you would hash this password
-    await c.env.DB.prepare(`
+    const updateResult = await c.env.DB.prepare(`
       UPDATE users 
       SET password = ?, updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
     `).bind(password, id).run()
 
-    // Add notification for the user with email
-    await createNotification(
-      c.env,
-      id,
-      'warning',
-      'Your password has been reset by an administrator. Please log in with your new password and consider changing it to something more secure.',
-      '🔑 Your Password Has Been Reset'
-    )
+    console.log('🔄 Database update result:', updateResult)
 
-    return c.json({ message: 'Password reset successfully' })
+    if (updateResult.changes === 0) {
+      console.log('❌ No rows updated')
+      return c.json({ message: 'Failed to update password' }, 500)
+    }
+
+    console.log('✅ Password updated successfully')
+
+    // Add notification for the user with email
+    try {
+      await createNotification(
+        c.env,
+        id,
+        'warning',
+        `Your password has been reset by an administrator. Your new password is: ${password}. Please log in with this password and consider changing it to something more secure.`,
+        '🔑 Your Password Has Been Reset'
+      )
+      console.log('✅ Notification sent')
+    } catch (notificationError) {
+      console.error('⚠️ Failed to send notification:', notificationError)
+      // Don't fail the password reset if notification fails
+    }
+
+    return c.json({ 
+      message: 'Password reset successfully',
+      details: {
+        userId: id,
+        userName: existingUser.name,
+        newPassword: password
+      }
+    })
   } catch (error) {
-    console.error('Reset password error:', error)
-    return c.json({ message: 'Failed to reset password' }, 500)
+    console.error('❌ Reset password error:', error)
+    return c.json({ 
+      message: 'Failed to reset password', 
+      error: error.message,
+      stack: error.stack 
+    }, 500)
   }
 })
 
