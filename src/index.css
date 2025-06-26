@@ -379,7 +379,7 @@
   }
   
   .dark input::placeholder, .dark textarea::placeholder {
-    @apply text-gray-500;
+    color: #6b7280;
   }
   
   .dark button {
@@ -407,7 +407,7 @@
   }
   
   .dark .text-gray-500 {
-    @apply text-gray-400;
+    color: #9ca3af;
   }
   
   .dark .border-gray-200 {
