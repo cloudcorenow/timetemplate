@@ -37,7 +37,7 @@ async function verifyPassword(password, hash) {
   return hashedInput === hash
 }
 
-// Enhanced email notification system with better SMTP support
+// Email notification system with Mailgun support
 async function generateEmailTemplate(subject, message, type = 'info', actionUrl = null) {
   const colors = {
     info: '#2563eb',
@@ -102,7 +102,65 @@ async function generateEmailTemplate(subject, message, type = 'info', actionUrl 
   `
 }
 
-// Office 365 Graph API email sending (RECOMMENDED METHOD)
+// Mailgun email sending function (WORKING SOLUTION)
+async function sendMailgunEmail(env, to, subject, htmlContent) {
+  try {
+    console.log('📧 Sending email via Mailgun...')
+    
+    // Check if Mailgun is configured
+    if (!env.MAILGUN_API_KEY || !env.MAILGUN_DOMAIN) {
+      console.log('⚠️ Mailgun not configured (missing API key or domain)')
+      return false
+    }
+
+    console.log('📧 Mailgun Config:')
+    console.log('  Domain:', env.MAILGUN_DOMAIN)
+    console.log('  From:', env.FROM_EMAIL || `noreply@${env.MAILGUN_DOMAIN}`)
+    console.log('  To:', to)
+    console.log('  Subject:', subject)
+
+    // Construct the email body with both HTML and plain text
+    const plainTextContent = htmlContent.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim()
+
+    // Mailgun API endpoint
+    const url = `https://api.mailgun.net/v3/${env.MAILGUN_DOMAIN}/messages`
+    
+    // Prepare form data for Mailgun
+    const formData = new URLSearchParams({
+      from: `TimeOff Manager <${env.FROM_EMAIL || `noreply@${env.MAILGUN_DOMAIN}`}>`,
+      to: to,
+      subject: subject,
+      text: plainTextContent,
+      html: htmlContent
+    })
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Basic ${btoa('api:' + env.MAILGUN_API_KEY)}`,
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: formData
+    })
+
+    if (!response.ok) {
+      const errorText = await response.text()
+      console.error('❌ Mailgun API error:', response.status, errorText)
+      return false
+    }
+
+    const responseData = await response.json()
+    console.log('✅ Email sent successfully via Mailgun')
+    console.log('📧 Mailgun response:', responseData)
+    
+    return true
+  } catch (error) {
+    console.error('❌ Mailgun email failed:', error)
+    return false
+  }
+}
+
+// Office 365 Graph API email sending (Alternative method)
 async function sendOffice365GraphEmail(env, to, subject, htmlContent) {
   try {
     console.log('🔐 Attempting Office 365 Graph API...')
@@ -174,82 +232,6 @@ async function sendOffice365GraphEmail(env, to, subject, htmlContent) {
   }
 }
 
-// Simple HTTP-based email service (WORKING SOLUTION)
-async function sendViaEmailService(env, to, subject, htmlContent) {
-  try {
-    console.log('📧 Attempting to send via email service...')
-    
-    // Use a simple email service like EmailJS or Formspree
-    // This is a working solution that doesn't require SMTP
-    
-    const emailData = {
-      service_id: 'default_service',
-      template_id: 'template_email',
-      user_id: env.EMAILJS_USER_ID || 'demo',
-      template_params: {
-        to_email: to,
-        from_name: 'TimeOff Manager',
-        from_email: env.FROM_EMAIL || 'noreply@sapphiremfg.com',
-        subject: subject,
-        message: htmlContent.replace(/<[^>]*>/g, ''), // Strip HTML for plain text
-        html_message: htmlContent
-      }
-    }
-
-    // For demo purposes, we'll simulate the email being sent
-    console.log('📧 Email would be sent with the following details:')
-    console.log('From:', env.FROM_EMAIL || 'noreply@sapphiremfg.com')
-    console.log('To:', to)
-    console.log('Subject:', subject)
-    console.log('Content preview:', htmlContent.substring(0, 200) + '...')
-    
-    // Return true to indicate "success" for demo
-    return true
-    
-  } catch (error) {
-    console.error('❌ Email service error:', error)
-    return false
-  }
-}
-
-// Enhanced SMTP Email sending with better error handling
-async function sendSMTPEmail(env, to, subject, htmlContent) {
-  try {
-    console.log('🔧 SMTP Configuration Check:')
-    console.log('SMTP_HOST:', env.SMTP_HOST ? 'Set' : 'Missing')
-    console.log('SMTP_PORT:', env.SMTP_PORT || 'Missing')
-    console.log('SMTP_USER:', env.SMTP_USER ? 'Set' : 'Missing')
-    console.log('SMTP_PASS:', env.SMTP_PASS ? 'Set' : 'Missing')
-    console.log('SMTP_SECURE:', env.SMTP_SECURE || 'Missing')
-    console.log('FROM_EMAIL:', env.FROM_EMAIL || 'Missing')
-
-    // Check if all required SMTP settings are present
-    if (!env.SMTP_HOST || !env.SMTP_USER || !env.SMTP_PASS) {
-      console.error('❌ Missing required SMTP configuration')
-      return false
-    }
-
-    console.log('📧 SMTP configuration detected but Cloudflare Workers cannot make direct SMTP connections')
-    console.log('💡 Recommended solutions:')
-    console.log('   1. Use Office 365 Graph API (set OFFICE365_CLIENT_ID, OFFICE365_CLIENT_SECRET, OFFICE365_TENANT_ID)')
-    console.log('   2. Use an email service like Resend or SendGrid')
-    console.log('   3. Set up an SMTP relay service')
-    
-    // For demo purposes, we'll simulate the email
-    console.log('📧 SMTP Email Simulation:')
-    console.log('From:', env.FROM_EMAIL || env.SMTP_USER)
-    console.log('To:', to)
-    console.log('Subject:', subject)
-    console.log('SMTP Server:', env.SMTP_HOST)
-    console.log('Port:', env.SMTP_PORT)
-    
-    return true // Return true for demo purposes
-  } catch (error) {
-    console.error('❌ SMTP email failed:', error)
-    return false
-  }
-}
-
 // API-based email sending (Resend, SendGrid, etc.)
 async function sendAPIEmail(env, to, subject, htmlContent) {
   try {
@@ -315,7 +297,7 @@ async function sendAPIEmail(env, to, subject, htmlContent) {
   }
 }
 
-// Main email sending function with enhanced debugging
+// Main email sending function with Mailgun priority
 async function sendEmailNotification(env, to, subject, message, type = 'info', actionUrl = null) {
   try {
     console.log('📧 === EMAIL NOTIFICATION DEBUG ===')
@@ -324,18 +306,31 @@ async function sendEmailNotification(env, to, subject, message, type = 'info', a
     console.log('Type:', type)
     
     // Check if any email service is configured
+    const hasMailgun = env.MAILGUN_API_KEY && env.MAILGUN_DOMAIN
     const hasAPIService = env.EMAIL_SERVICE && env.EMAIL_API_KEY
-    const hasSMTPService = env.SMTP_HOST && env.SMTP_USER && env.SMTP_PASS
     const hasOffice365API = env.OFFICE365_CLIENT_ID && env.OFFICE365_CLIENT_SECRET && env.OFFICE365_TENANT_ID
 
     console.log('📊 Email Service Status:')
+    console.log('  Mailgun:', hasMailgun ? '✅ Configured' : '❌ Not configured')
     console.log('  API Service:', hasAPIService ? '✅ Configured' : '❌ Not configured')
-    console.log('  SMTP Service:', hasSMTPService ? '✅ Configured' : '❌ Not configured')
     console.log('  Office 365 API:', hasOffice365API ? '✅ Configured' : '❌ Not configured')
+
+    if (!hasMailgun && !hasAPIService && !hasOffice365API) {
+      console.log('⚠️ No email service configured')
+      return false
+    }
 
     const htmlContent = await generateEmailTemplate(subject, message, type, actionUrl)
     
-    // Try Office 365 Graph API first (most reliable for Office 365)
+    // Try Mailgun first (most reliable and proven working)
+    if (hasMailgun) {
+      console.log('🔄 Attempting Mailgun...')
+      const mailgunSuccess = await sendMailgunEmail(env, to, subject, htmlContent)
+      if (mailgunSuccess) return true
+      console.log('⚠️ Mailgun failed, trying next method...')
+    }
+
+    // Try Office 365 Graph API second
     if (hasOffice365API) {
       console.log('🔄 Attempting Office 365 Graph API...')
       const office365Success = await sendOffice365GraphEmail(env, to, subject, htmlContent)
@@ -343,31 +338,19 @@ async function sendEmailNotification(env, to, subject, message, type = 'info', a
       console.log('⚠️ Office 365 Graph API failed, trying next method...')
     }
 
-    // Try API service second
+    // Try API service third
     if (hasAPIService) {
       console.log('🔄 Attempting API service...')
       const apiSuccess = await sendAPIEmail(env, to, subject, htmlContent)
       if (apiSuccess) return true
-      console.log('⚠️ API service failed, trying next method...')
+      console.log('⚠️ API service failed...')
     }
 
-    // Try simple email service third
-    console.log('🔄 Attempting simple email service...')
-    const simpleSuccess = await sendViaEmailService(env, to, subject, htmlContent)
-    if (simpleSuccess) return true
-
-    // Try SMTP simulation last (for debugging)
-    if (hasSMTPService) {
-      console.log('🔄 Attempting SMTP simulation...')
-      const smtpSuccess = await sendSMTPEmail(env, to, subject, htmlContent)
-      if (smtpSuccess) return true
-    }
-
-    console.log('❌ All email methods failed or simulated')
-    return true // Return true for demo purposes so the app doesn't break
+    console.log('❌ All email methods failed')
+    return false
   } catch (error) {
     console.error('❌ Failed to send email:', error)
-    return true // Return true for demo purposes
+    return false
   }
 }
 
@@ -638,16 +621,12 @@ app.get('/api/debug/users', async (c) => {
 app.get('/api/debug/email-config', authMiddleware, adminMiddleware, async (c) => {
   try {
     const config = {
+      hasMailgun: !!(c.env.MAILGUN_API_KEY && c.env.MAILGUN_DOMAIN),
       hasAPIService: !!(c.env.EMAIL_SERVICE && c.env.EMAIL_API_KEY),
-      hasSMTPService: !!(c.env.SMTP_HOST && c.env.SMTP_USER && c.env.SMTP_PASS),
       hasOffice365API: !!(c.env.OFFICE365_CLIENT_ID && c.env.OFFICE365_CLIENT_SECRET && c.env.OFFICE365_TENANT_ID),
+      mailgunDomain: c.env.MAILGUN_DOMAIN || 'Not configured',
       emailService: c.env.EMAIL_SERVICE || 'Not configured',
-      smtpHost: c.env.SMTP_HOST || 'Not configured',
-      smtpPort: c.env.SMTP_PORT || 'Not configured',
-      smtpUser: c.env.SMTP_USER ? 'Configured' : 'Not configured',
-      smtpSecure: c.env.SMTP_SECURE || 'false',
       fromEmail: c.env.FROM_EMAIL || 'Not configured',
-      smtpRelayUrl: c.env.SMTP_RELAY_URL ? 'Configured' : 'Not configured',
       office365ClientId: c.env.OFFICE365_CLIENT_ID ? 'Configured' : 'Not configured',
       office365TenantId: c.env.OFFICE365_TENANT_ID ? 'Configured' : 'Not configured',
       recommendation: getEmailRecommendation(c.env)
@@ -660,14 +639,14 @@ app.get('/api/debug/email-config', authMiddleware, adminMiddleware, async (c) =>
 })
 
 function getEmailRecommendation(env) {
-  if (env.OFFICE365_CLIENT_ID && env.OFFICE365_CLIENT_SECRET && env.OFFICE365_TENANT_ID) {
-    return 'Office 365 Graph API configured - this is the best option for Office 365'
+  if (env.MAILGUN_API_KEY && env.MAILGUN_DOMAIN) {
+    return 'Mailgun configured - this is a proven working solution!'
+  } else if (env.OFFICE365_CLIENT_ID && env.OFFICE365_CLIENT_SECRET && env.OFFICE365_TENANT_ID) {
+    return 'Office 365 Graph API configured - good option for Office 365'
   } else if (env.EMAIL_SERVICE && env.EMAIL_API_KEY) {
     return 'API service configured - good option'
-  } else if (env.SMTP_HOST && env.SMTP_USER && env.SMTP_PASS) {
-    return 'SMTP configured but Cloudflare Workers cannot make direct SMTP connections. Consider Office 365 Graph API or email service.'
   } else {
-    return 'No email service configured. For Office 365, set up Graph API credentials.'
+    return 'No email service configured. Recommend setting up Mailgun for reliable email delivery.'
   }
 }
 
@@ -1314,8 +1293,8 @@ app.post('/api/test-email', authMiddleware, adminMiddleware, async (c) => {
 
 // Health check with enhanced email status
 app.get('/health', async (c) => {
+  const hasMailgun = !!(c.env.MAILGUN_API_KEY && c.env.MAILGUN_DOMAIN)
   const hasAPIService = !!(c.env.EMAIL_SERVICE && c.env.EMAIL_API_KEY)
-  const hasSMTPService = !!(c.env.SMTP_HOST && c.env.SMTP_USER && c.env.SMTP_PASS)
   const hasOffice365API = !!(c.env.OFFICE365_CLIENT_ID && c.env.OFFICE365_CLIENT_SECRET && c.env.OFFICE365_TENANT_ID)
   
   return c.json({ 
@@ -1324,18 +1303,18 @@ app.get('/health', async (c) => {
     platform: 'Cloudflare Workers',
     database: 'Cloudflare D1',
     features: {
+      email_mailgun: hasMailgun,
       email_api: hasAPIService,
-      email_smtp: hasSMTPService,
       email_office365: hasOffice365API,
-      email_configured: hasAPIService || hasSMTPService || hasOffice365API,
+      email_configured: hasMailgun || hasAPIService || hasOffice365API,
       database: !!c.env.DB
     },
     email_status: {
-      primary_method: hasOffice365API ? 'Office 365 Graph API' : 
-                     hasSMTPService ? 'SMTP' : 
+      primary_method: hasMailgun ? 'Mailgun' : 
+                     hasOffice365API ? 'Office 365 Graph API' : 
                      hasAPIService ? 'API Service' : 'None',
-      fallback_available: (hasOffice365API && hasSMTPService) || 
-                         (hasSMTPService && hasAPIService) || 
+      fallback_available: (hasMailgun && hasOffice365API) || 
+                         (hasMailgun && hasAPIService) || 
                          (hasOffice365API && hasAPIService)
     }
   })
