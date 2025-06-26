@@ -454,9 +454,8 @@ async function initDatabase(db) {
 
       for (const user of users) {
         await db.prepare(
-          'INSERT INTO users (id, name, email, password, role, department, avatar, email_notifications, email_verified) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
-          user
-        ).run()
+          'INSERT INTO users (id, name, email, password, role, department, avatar, email_notifications, email_verified) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
+        ).bind(...user).run()
       }
 
       // Insert sample time off requests
@@ -470,22 +469,19 @@ async function initDatabase(db) {
 
       for (const request of requests) {
         await db.prepare(
-          'INSERT INTO time_off_requests (id, employee_id, start_date, end_date, type, reason, status, approved_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-          request
-        ).run()
+          'INSERT INTO time_off_requests (id, employee_id, start_date, end_date, type, reason, status, approved_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
+        ).bind(...request).run()
       }
 
       // Update time edit request with time details
       await db.prepare(
-        'UPDATE time_off_requests SET original_clock_in = ?, original_clock_out = ?, requested_clock_in = ?, requested_clock_out = ? WHERE id = ?',
-        ['08:00:00', '17:00:00', '08:00:00', '18:00:00', 'req4']
-      ).run()
+        'UPDATE time_off_requests SET original_clock_in = ?, original_clock_out = ?, requested_clock_in = ?, requested_clock_out = ? WHERE id = ?'
+      ).bind('08:00:00', '17:00:00', '08:00:00', '18:00:00', 'req4').run()
 
       // Update rejected request with rejection reason
       await db.prepare(
-        'UPDATE time_off_requests SET rejection_reason = ? WHERE id = ?',
-        ['Insufficient notice period. Please submit requests at least 2 weeks in advance.', 'req5']
-      ).run()
+        'UPDATE time_off_requests SET rejection_reason = ? WHERE id = ?'
+      ).bind('Insufficient notice period. Please submit requests at least 2 weeks in advance.', 'req5').run()
 
       // Insert sample notifications
       const notifications = [
@@ -499,21 +495,24 @@ async function initDatabase(db) {
 
       for (const notification of notifications) {
         await db.prepare(
-          'INSERT INTO notifications (id, user_id, type, message, is_read) VALUES (?, ?, ?, ?, ?)',
-          notification
-        ).run()
+          'INSERT INTO notifications (id, user_id, type, message, is_read) VALUES (?, ?, ?, ?, ?)'
+        ).bind(...notification).run()
       }
 
       console.log('✅ Sample data inserted successfully')
     } else {
-      // Update existing admin user email if it exists
-      const adminUser = await db.prepare('SELECT id FROM users WHERE role = "admin" LIMIT 1').first()
-      if (adminUser) {
-        await db.prepare(`
-          UPDATE users SET email = ? WHERE role = "admin"
-        `).bind('it@sapphiremfg.com').run()
-        console.log('✅ Updated admin email to it@sapphiremfg.com')
-      }
+      // ALWAYS update admin user email to it@sapphiremfg.com
+      console.log('🔄 Updating admin user email to it@sapphiremfg.com...')
+      
+      const updateResult = await db.prepare(`
+        UPDATE users SET email = ? WHERE role = "admin"
+      `).bind('it@sapphiremfg.com').run()
+      
+      console.log('✅ Admin email update result:', updateResult)
+      
+      // Verify the update worked
+      const adminUser = await db.prepare('SELECT email FROM users WHERE role = "admin"').first()
+      console.log('✅ Admin user email is now:', adminUser?.email)
 
       // Update existing users to have email preferences if they don't exist
       await db.prepare(`
