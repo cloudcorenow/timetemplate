@@ -48,7 +48,7 @@ const LoginPage: React.FC = () => {
         addToast({
           type: 'error',
           title: 'Login Failed',
-          message: 'Invalid email or password. Please use the demo credentials below.'
+          message: 'Invalid email or password. Please check your credentials and try again.'
         });
       }
     } catch (err) {
@@ -61,16 +61,6 @@ const LoginPage: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const handleDemoLogin = (demoEmail: string) => {
-    setEmail(demoEmail);
-    setPassword('password');
-    addToast({
-      type: 'info',
-      title: 'Demo Account Selected',
-      message: `Using ${demoEmail} for demonstration`
-    });
   };
 
   return (
@@ -139,6 +129,26 @@ const LoginPage: React.FC = () => {
               </div>
             </div>
 
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <input
+                  id="remember-me"
+                  name="remember-me"
+                  type="checkbox"
+                  className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                />
+                <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-900">
+                  Remember me
+                </label>
+              </div>
+
+              <div className="text-sm">
+                <a href="#" className="font-medium text-blue-600 hover:text-blue-500">
+                  Forgot your password?
+                </a>
+              </div>
+            </div>
+
             <Button
               type="submit"
               loading={isLoading}
@@ -148,52 +158,6 @@ const LoginPage: React.FC = () => {
               Sign in
             </Button>
           </form>
-
-          <div className="mt-8">
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-300" />
-              </div>
-              <div className="relative flex justify-center text-sm">
-                <span className="bg-white px-4 text-gray-500 font-medium">Demo Accounts</span>
-              </div>
-            </div>
-
-            <div className="mt-6 grid grid-cols-1 gap-3">
-              <button
-                type="button"
-                onClick={() => handleDemoLogin('employee@example.com')}
-                className="flex w-full items-center justify-center rounded-lg border border-gray-300 bg-white px-4 py-3 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 transition-all duration-200 hover:shadow-md"
-              >
-                <span className="mr-2 text-lg">👤</span>
-                Employee Demo
-              </button>
-              <button
-                type="button"
-                onClick={() => handleDemoLogin('manager@example.com')}
-                className="flex w-full items-center justify-center rounded-lg border border-gray-300 bg-white px-4 py-3 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 transition-all duration-200 hover:shadow-md"
-              >
-                <span className="mr-2 text-lg">👔</span>
-                Manager Demo
-              </button>
-              <button
-                type="button"
-                onClick={() => handleDemoLogin('it@sapphiremfg.com')}
-                className="flex w-full items-center justify-center rounded-lg border border-gray-300 bg-white px-4 py-3 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 transition-all duration-200 hover:shadow-md"
-              >
-                <span className="mr-2 text-lg">🔧</span>
-                Admin Demo
-              </button>
-            </div>
-
-            <div className="mt-6 rounded-lg bg-blue-50 border border-blue-200 p-4 text-center">
-              <p className="text-sm font-medium text-blue-900 mb-2">Demo Credentials</p>
-              <p className="text-xs text-blue-700">
-                Email: Any of the demo emails above<br />
-                Password: <code className="bg-blue-100 px-1 rounded font-mono">password</code>
-              </p>
-            </div>
-          </div>
         </div>
 
         <div className="mt-8 text-center">
