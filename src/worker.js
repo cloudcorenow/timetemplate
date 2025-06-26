@@ -337,16 +337,12 @@ function getEmailSubject(type, message) {
   }
 }
 
-// Database initialization - only run once
-let dbInitialized = false
-
+// Database initialization - simplified and more robust
 async function initDatabase(db) {
-  if (dbInitialized) return
-  
   try {
     console.log('🔄 Initializing database...')
 
-    // Create users table with all required columns
+    // Create users table
     await db.prepare(`
       CREATE TABLE IF NOT EXISTS users (
         id TEXT PRIMARY KEY,
@@ -396,44 +392,94 @@ async function initDatabase(db) {
       )
     `).run()
 
-    // Check if we need to add missing columns to existing users table
-    try {
-      await db.prepare('SELECT email_notifications FROM users LIMIT 1').first()
-    } catch (error) {
-      if (error.message.includes('no such column: email_notifications')) {
-        await db.prepare('ALTER TABLE users ADD COLUMN email_notifications BOOLEAN DEFAULT TRUE').run()
-      }
-    }
-
-    try {
-      await db.prepare('SELECT email_verified FROM users LIMIT 1').first()
-    } catch (error) {
-      if (error.message.includes('no such column: email_verified')) {
-        await db.prepare('ALTER TABLE users ADD COLUMN email_verified BOOLEAN DEFAULT FALSE').run()
-      }
-    }
-
     // Check if users already exist
     const existingUsers = await db.prepare('SELECT COUNT(*) as count FROM users').first()
     
     if (existingUsers.count === 0) {
       console.log('📝 Inserting sample users...')
       
-      // Insert sample users with correct admin email
+      // Insert sample users - using simple passwords for demo
       const users = [
-        ['1', 'Juan Carranza', 'employee@example.com', 'password', 'employee', 'Engineering', 'https://images.pexels.com/photos/2379004/pexels-photo-2379004.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1', true, true],
-        ['2', 'Ana Ramirez', 'manager@example.com', 'password', 'manager', 'Engineering', 'https://images.pexels.com/photos/774909/pexels-photo-774909.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1', true, true],
-        ['3', 'Alissa Pryor', 'alice@example.com', 'password', 'employee', 'Marketing', 'https://images.pexels.com/photos/415829/pexels-photo-415829.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1', true, true],
-        ['4', 'Charly Osornio', 'bob@example.com', 'password', 'employee', 'Sales', 'https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1', true, true],
-        ['5', 'Admin User', 'it@sapphiremfg.com', 'password', 'admin', 'IT', 'https://images.pexels.com/photos/614810/pexels-photo-614810.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1', true, true],
-        ['6', 'Sarah Johnson', 'sarah@example.com', 'password', 'employee', 'Project Management', 'https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1', true, true],
-        ['7', 'Mike Rodriguez', 'mike@example.com', 'password', 'employee', 'Shop', 'https://images.pexels.com/photos/1681010/pexels-photo-1681010.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1', true, true]
+        {
+          id: '1',
+          name: 'Juan Carranza',
+          email: 'employee@example.com',
+          password: 'password',
+          role: 'employee',
+          department: 'Engineering',
+          avatar: 'https://images.pexels.com/photos/2379004/pexels-photo-2379004.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1'
+        },
+        {
+          id: '2',
+          name: 'Ana Ramirez',
+          email: 'manager@example.com',
+          password: 'password',
+          role: 'manager',
+          department: 'Engineering',
+          avatar: 'https://images.pexels.com/photos/774909/pexels-photo-774909.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1'
+        },
+        {
+          id: '3',
+          name: 'Alissa Pryor',
+          email: 'alice@example.com',
+          password: 'password',
+          role: 'employee',
+          department: 'Marketing',
+          avatar: 'https://images.pexels.com/photos/415829/pexels-photo-415829.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1'
+        },
+        {
+          id: '4',
+          name: 'Charly Osornio',
+          email: 'bob@example.com',
+          password: 'password',
+          role: 'employee',
+          department: 'Sales',
+          avatar: 'https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1'
+        },
+        {
+          id: '5',
+          name: 'Admin User',
+          email: 'it@sapphiremfg.com',
+          password: 'password',
+          role: 'admin',
+          department: 'IT',
+          avatar: 'https://images.pexels.com/photos/614810/pexels-photo-614810.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1'
+        },
+        {
+          id: '6',
+          name: 'Sarah Johnson',
+          email: 'sarah@example.com',
+          password: 'password',
+          role: 'employee',
+          department: 'Project Management',
+          avatar: 'https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1'
+        },
+        {
+          id: '7',
+          name: 'Mike Rodriguez',
+          email: 'mike@example.com',
+          password: 'password',
+          role: 'employee',
+          department: 'Shop',
+          avatar: 'https://images.pexels.com/photos/1681010/pexels-photo-1681010.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1'
+        }
       ]
 
       for (const user of users) {
-        await db.prepare(
-          'INSERT INTO users (id, name, email, password, role, department, avatar, email_notifications, email_verified) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
-        ).bind(...user).run()
+        await db.prepare(`
+          INSERT INTO users (id, name, email, password, role, department, avatar, email_notifications, email_verified)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `).bind(
+          user.id,
+          user.name,
+          user.email,
+          user.password,
+          user.role,
+          user.department,
+          user.avatar,
+          true,
+          false
+        ).run()
       }
 
       // Insert sample time off requests
@@ -446,20 +492,25 @@ async function initDatabase(db) {
       ]
 
       for (const request of requests) {
-        await db.prepare(
-          'INSERT INTO time_off_requests (id, employee_id, start_date, end_date, type, reason, status, approved_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
-        ).bind(...request).run()
+        await db.prepare(`
+          INSERT INTO time_off_requests (id, employee_id, start_date, end_date, type, reason, status, approved_by)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        `).bind(...request).run()
       }
 
       // Update time edit request with time details
-      await db.prepare(
-        'UPDATE time_off_requests SET original_clock_in = ?, original_clock_out = ?, requested_clock_in = ?, requested_clock_out = ? WHERE id = ?'
-      ).bind('08:00:00', '17:00:00', '08:00:00', '18:00:00', 'req4').run()
+      await db.prepare(`
+        UPDATE time_off_requests 
+        SET original_clock_in = ?, original_clock_out = ?, requested_clock_in = ?, requested_clock_out = ?
+        WHERE id = ?
+      `).bind('08:00:00', '17:00:00', '08:00:00', '18:00:00', 'req4').run()
 
       // Update rejected request with rejection reason
-      await db.prepare(
-        'UPDATE time_off_requests SET rejection_reason = ? WHERE id = ?'
-      ).bind('Insufficient notice period. Please submit requests at least 2 weeks in advance.', 'req5').run()
+      await db.prepare(`
+        UPDATE time_off_requests 
+        SET rejection_reason = ?
+        WHERE id = ?
+      `).bind('Insufficient notice period. Please submit requests at least 2 weeks in advance.', 'req5').run()
 
       // Insert sample notifications
       const notifications = [
@@ -472,31 +523,17 @@ async function initDatabase(db) {
       ]
 
       for (const notification of notifications) {
-        await db.prepare(
-          'INSERT INTO notifications (id, user_id, type, message, is_read) VALUES (?, ?, ?, ?, ?)'
-        ).bind(...notification).run()
+        await db.prepare(`
+          INSERT INTO notifications (id, user_id, type, message, is_read)
+          VALUES (?, ?, ?, ?, ?)
+        `).bind(...notification).run()
       }
 
       console.log('✅ Sample data inserted successfully')
     } else {
-      // Only update admin email if it's still the old one
-      const adminUser = await db.prepare('SELECT email FROM users WHERE role = "admin"').first()
-      if (adminUser && adminUser.email === 'admin@example.com') {
-        console.log('🔄 Updating admin user email to it@sapphiremfg.com...')
-        await db.prepare('UPDATE users SET email = ? WHERE role = "admin"').bind('it@sapphiremfg.com').run()
-        console.log('✅ Admin email updated')
-      }
-
-      // Update existing users to have email preferences if they don't exist
-      await db.prepare(`
-        UPDATE users SET 
-          email_notifications = COALESCE(email_notifications, TRUE),
-          email_verified = COALESCE(email_verified, FALSE)
-        WHERE email_notifications IS NULL OR email_verified IS NULL
-      `).run()
+      console.log('ℹ️ Database already contains data')
     }
 
-    dbInitialized = true
     console.log('✅ Database initialization completed')
   } catch (error) {
     console.error('❌ Database initialization error:', error)
@@ -552,10 +589,14 @@ const managerOrAdminMiddleware = async (c, next) => {
   await next()
 }
 
-// Initialize database middleware - only run once
+// Initialize database on first request
 app.use('*', async (c, next) => {
-  if (c.env.DB && !dbInitialized) {
-    await initDatabase(c.env.DB)
+  if (c.env.DB) {
+    try {
+      await initDatabase(c.env.DB)
+    } catch (error) {
+      console.error('Database initialization failed:', error)
+    }
   }
   await next()
 })
@@ -572,7 +613,8 @@ app.get('/api/debug/users', async (c) => {
         id: u.id,
         email: u.email,
         role: u.role,
-        passwordLength: u.password.length
+        passwordLength: u.password.length,
+        passwordPreview: u.password.substring(0, 10) + '...'
       }))
     })
   } catch (error) {
