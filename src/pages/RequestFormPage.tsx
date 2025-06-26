@@ -90,7 +90,8 @@ const RequestFormPage: React.FC = () => {
         return range?.from !== undefined && range?.to !== undefined;
       case 3:
         if (isTimeEditRequest) {
-          return originalClockIn && originalClockOut && requestedClockIn && requestedClockOut;
+          // Only require the requested times for time edit requests
+          return requestedClockIn && requestedClockOut && reason.trim() !== '';
         }
         return reason.trim() !== '';
       default:
@@ -124,8 +125,9 @@ const RequestFormPage: React.FC = () => {
     }
 
     if (isTimeEditRequest) {
-      if (!originalClockIn || !originalClockOut || !requestedClockIn || !requestedClockOut) {
-        setError('Please fill in all time fields for time edit requests');
+      // Only require the requested times for time edit requests
+      if (!requestedClockIn || !requestedClockOut) {
+        setError('Please fill in the correct clock in/out times');
         return;
       }
     } else {
@@ -315,7 +317,7 @@ const RequestFormPage: React.FC = () => {
 
                 <div className="space-y-6">
                   <div className="rounded-lg bg-amber-50 border border-amber-200 p-4">
-                    <h4 className="font-medium text-amber-800 mb-3">Original Times</h4>
+                    <h4 className="font-medium text-amber-800 mb-3">Original Times (Optional)</h4>
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -343,7 +345,7 @@ const RequestFormPage: React.FC = () => {
                   </div>
 
                   <div className="rounded-lg bg-green-50 border border-green-200 p-4">
-                    <h4 className="font-medium text-green-800 mb-3">Correct Times</h4>
+                    <h4 className="font-medium text-green-800 mb-3">Correct Times (Required)</h4>
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -354,6 +356,7 @@ const RequestFormPage: React.FC = () => {
                           value={requestedClockIn}
                           onChange={(e) => setRequestedClockIn(e.target.value)}
                           className="w-full rounded-lg border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                          required
                         />
                       </div>
                       <div>
@@ -365,6 +368,7 @@ const RequestFormPage: React.FC = () => {
                           value={requestedClockOut}
                           onChange={(e) => setRequestedClockOut(e.target.value)}
                           className="w-full rounded-lg border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                          required
                         />
                       </div>
                     </div>
@@ -433,20 +437,24 @@ const RequestFormPage: React.FC = () => {
                       )}
                     </span>
                   </div>
-                  {isTimeEditRequest && originalClockIn && originalClockOut && (
+                  {isTimeEditRequest && (
                     <>
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Original Times:</span>
-                        <span className="font-medium font-mono">
-                          {originalClockIn} - {originalClockOut}
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Requested Times:</span>
-                        <span className="font-medium font-mono">
-                          {requestedClockIn} - {requestedClockOut}
-                        </span>
-                      </div>
+                      {(originalClockIn || originalClockOut) && (
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Original Times:</span>
+                          <span className="font-medium font-mono">
+                            {originalClockIn || 'N/A'} - {originalClockOut || 'N/A'}
+                          </span>
+                        </div>
+                      )}
+                      {(requestedClockIn || requestedClockOut) && (
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Requested Times:</span>
+                          <span className="font-medium font-mono">
+                            {requestedClockIn || 'N/A'} - {requestedClockOut || 'N/A'}
+                          </span>
+                        </div>
+                      )}
                     </>
                   )}
                   <div className="flex justify-between">

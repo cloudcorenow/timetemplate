@@ -76,9 +76,20 @@ class ApiService {
     return this.request('/requests');
   }
 
+  async getRequest(id: string) {
+    return this.request(`/requests/${id}`);
+  }
+
   async createRequest(requestData: any) {
     return this.request('/requests', {
       method: 'POST',
+      body: JSON.stringify(requestData),
+    });
+  }
+
+  async updateRequest(id: string, requestData: any) {
+    return this.request(`/requests/${id}`, {
+      method: 'PUT',
       body: JSON.stringify(requestData),
     });
   }

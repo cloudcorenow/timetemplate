@@ -96,11 +96,12 @@ const MobileRequestFormPage: React.FC = () => {
     }
 
     if (isTimeEditRequest) {
-      if (!originalClockIn || !originalClockOut || !requestedClockIn || !requestedClockOut) {
+      // Only require the requested times for time edit requests
+      if (!requestedClockIn || !requestedClockOut) {
         addToast({
           type: 'error',
           title: 'Missing Time Information',
-          message: 'Please fill in all time fields'
+          message: 'Please fill in the correct clock in/out times'
         });
         return;
       }
@@ -173,7 +174,8 @@ const MobileRequestFormPage: React.FC = () => {
         return range?.from && (!isTimeEditRequest || range?.to);
       case 3:
         if (isTimeEditRequest) {
-          return originalClockIn && originalClockOut && requestedClockIn && requestedClockOut;
+          // Only require the requested times for time edit requests
+          return requestedClockIn && requestedClockOut;
         }
         return reason.trim() !== '';
       case 4:
@@ -291,7 +293,7 @@ const MobileRequestFormPage: React.FC = () => {
               
               <div className="space-y-4">
                 <TouchOptimizedCard className="p-4">
-                  <h3 className="font-medium text-gray-900 dark:text-white mb-3">Original Times</h3>
+                  <h3 className="font-medium text-gray-900 dark:text-white mb-3">Original Times (Optional)</h3>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -319,7 +321,7 @@ const MobileRequestFormPage: React.FC = () => {
                 </TouchOptimizedCard>
 
                 <TouchOptimizedCard className="p-4">
-                  <h3 className="font-medium text-gray-900 dark:text-white mb-3">Correct Times</h3>
+                  <h3 className="font-medium text-gray-900 dark:text-white mb-3">Correct Times (Required)</h3>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -330,6 +332,7 @@ const MobileRequestFormPage: React.FC = () => {
                         value={requestedClockIn}
                         onChange={(e) => setRequestedClockIn(e.target.value)}
                         className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-3 text-base text-gray-900 dark:text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:focus:ring-blue-400"
+                        required
                       />
                     </div>
                     <div>
@@ -341,6 +344,7 @@ const MobileRequestFormPage: React.FC = () => {
                         value={requestedClockOut}
                         onChange={(e) => setRequestedClockOut(e.target.value)}
                         className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-3 text-base text-gray-900 dark:text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:focus:ring-blue-400"
+                        required
                       />
                     </div>
                   </div>
