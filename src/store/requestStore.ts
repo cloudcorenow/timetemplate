@@ -14,6 +14,8 @@ interface RequestState {
   fetchRequests: () => Promise<void>;
   addRequest: (request: any) => Promise<void>;
   updateRequestStatus: (id: string, status: RequestStatus, manager?: User, rejectionReason?: string) => Promise<void>;
+  updateRequest: (request: TimeOffRequest) => Promise<void>;
+  deleteRequest: (id: string) => Promise<void>;
   
   // Cache methods
   invalidateCache: (keys?: string[]) => void;
@@ -130,6 +132,56 @@ export const useRequestStore = create<RequestState>((set, get) => ({
     } catch (error) {
       console.error('Error updating request status:', error);
       set({ error: 'Failed to update request status', isLoading: false });
+      throw error;
+    }
+  },
+
+  updateRequest: async (request) => {
+    set({ isLoading: true, error: null });
+    try {
+      // In a real app, this would call the API to update the request
+      // For now, we'll just update the local store
+      
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Update the request in the local store
+      const updatedRequests = get().requests.map(r => 
+        r.id === request.id ? request : r
+      );
+      
+      // Update cache and state
+      const now = Date.now();
+      set(state => ({
+        requests: updatedRequests,
+        isLoading: false,
+        lastFetch: now,
+        cache: new Map(state.cache).set('requests', {
+          data: updatedRequests,
+          timestamp: now
+        })
+      }));
+      
+      console.log('✅ Request updated successfully');
+    } catch (error) {
+      console.error('Error updating request:', error);
+      set({ error: 'Failed to update request', isLoading: false });
+      throw error;
+    }
+  },
+
+  deleteRequest: async (id) => {
+    set({ isLoading: true, error: null });
+    try {
+      await apiService.deleteRequest(id);
+      
+      // Invalidate cache and refresh data
+      console.log('✅ Request deleted, invalidating cache');
+      get().invalidateCache(['requests']);
+      await get().fetchRequests();
+    } catch (error) {
+      console.error('Error deleting request:', error);
+      set({ error: 'Failed to delete request', isLoading: false });
       throw error;
     }
   },

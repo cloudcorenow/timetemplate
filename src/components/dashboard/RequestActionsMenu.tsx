@@ -5,6 +5,8 @@ import { useToast } from '../../hooks/useToast';
 import { apiService } from '../../services/api';
 import { useRequestStore } from '../../store/requestStore';
 import { useAuth } from '../../context/AuthContext';
+import RequestDetailsModal from './RequestDetailsModal';
+import EditRequestModal from './EditRequestModal';
 
 interface RequestActionsMenuProps {
   requestId: string;
@@ -21,6 +23,8 @@ const RequestActionsMenu: React.FC<RequestActionsMenuProps> = ({
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
   const { addToast } = useToast();
@@ -41,21 +45,12 @@ const RequestActionsMenu: React.FC<RequestActionsMenuProps> = ({
   }, []);
 
   const handleViewDetails = () => {
-    // In a real app, this would navigate to a detailed view
-    addToast({
-      type: 'info',
-      title: 'View Request Details',
-      message: `Viewing details for ${employeeName}'s request`
-    });
+    setShowDetailsModal(true);
     setIsOpen(false);
   };
 
   const handleEdit = () => {
-    addToast({
-      type: 'info',
-      title: 'Edit Request',
-      message: `Editing ${employeeName}'s request`
-    });
+    setShowEditModal(true);
     setIsOpen(false);
   };
 
@@ -112,6 +107,21 @@ const RequestActionsMenu: React.FC<RequestActionsMenuProps> = ({
     return false;
   };
 
+  // Check if the current user can edit this request
+  const canEdit = () => {
+    if (!user) return false;
+    
+    // Admins and managers can edit any request
+    if (user.role === 'admin' || user.role === 'manager') return true;
+    
+    // Employees can only edit their own requests when they're in pending status
+    if (user.role === 'employee') {
+      return employeeId === user.id && status === 'pending';
+    }
+    
+    return false;
+  };
+
   return (
     <div className="relative" ref={menuRef}>
       <button
@@ -132,13 +142,15 @@ const RequestActionsMenu: React.FC<RequestActionsMenuProps> = ({
             View Details
           </button>
           
-          <button
-            onClick={handleEdit}
-            className="flex w-full items-center px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100"
-          >
-            <Edit size={16} className="mr-3 text-gray-400" />
-            Edit Request
-          </button>
+          {canEdit() && (
+            <button
+              onClick={handleEdit}
+              className="flex w-full items-center px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100"
+            >
+              <Edit size={16} className="mr-3 text-gray-400" />
+              Edit Request
+            </button>
+          )}
           
           <button
             onClick={handleArchive}
@@ -164,6 +176,20 @@ const RequestActionsMenu: React.FC<RequestActionsMenuProps> = ({
           )}
         </div>
       )}
+
+      {/* Request Details Modal */}
+      <RequestDetailsModal
+        isOpen={showDetailsModal}
+        onClose={() => setShowDetailsModal(false)}
+        requestId={requestId}
+      />
+
+      {/* Edit Request Modal */}
+      <EditRequestModal
+        isOpen={showEditModal}
+        onClose={() => setShowEditModal(false)}
+        requestId={requestId}
+      />
     </div>
   );
 };
