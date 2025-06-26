@@ -90,6 +90,12 @@ class ApiService {
     });
   }
 
+  async deleteRequest(id: string) {
+    return this.request(`/requests/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
   // Notification methods
   async getNotifications() {
     return this.request('/notifications');

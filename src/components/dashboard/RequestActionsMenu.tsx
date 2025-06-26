@@ -1,7 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { MoreVertical, Eye, Trash2, Edit, Copy, Archive } from 'lucide-react';
+import { MoreVertical, Eye, Trash2, Edit, Archive } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '../../hooks/useToast';
+import { apiService } from '../../services/api';
+import { useRequestStore } from '../../store/requestStore';
 
 interface RequestActionsMenuProps {
   requestId: string;
@@ -10,9 +12,11 @@ interface RequestActionsMenuProps {
 
 const RequestActionsMenu: React.FC<RequestActionsMenuProps> = ({ requestId, employeeName }) => {
   const [isOpen, setIsOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
   const { addToast } = useToast();
+  const { forceRefresh } = useRequestStore();
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -46,23 +50,32 @@ const RequestActionsMenu: React.FC<RequestActionsMenuProps> = ({ requestId, empl
     setIsOpen(false);
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (confirm(`Are you sure you want to delete ${employeeName}'s request?`)) {
-      addToast({
-        type: 'success',
-        title: 'Request Deleted',
-        message: `${employeeName}'s request has been deleted`
-      });
+      setIsDeleting(true);
+      try {
+        // Call the API to delete the request
+        await apiService.deleteRequest(requestId);
+        
+        // Refresh the requests list
+        await forceRefresh();
+        
+        addToast({
+          type: 'success',
+          title: 'Request Deleted',
+          message: `${employeeName}'s request has been deleted successfully`
+        });
+      } catch (error) {
+        console.error('Failed to delete request:', error);
+        addToast({
+          type: 'error',
+          title: 'Delete Failed',
+          message: 'Failed to delete the request. Please try again.'
+        });
+      } finally {
+        setIsDeleting(false);
+      }
     }
-    setIsOpen(false);
-  };
-
-  const handleDuplicate = () => {
-    addToast({
-      type: 'info',
-      title: 'Request Duplicated',
-      message: `Created a copy of ${employeeName}'s request`
-    });
     setIsOpen(false);
   };
 
@@ -104,14 +117,6 @@ const RequestActionsMenu: React.FC<RequestActionsMenuProps> = ({ requestId, empl
           </button>
           
           <button
-            onClick={handleDuplicate}
-            className="flex w-full items-center px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100"
-          >
-            <Copy size={16} className="mr-3 text-gray-400" />
-            Duplicate
-          </button>
-          
-          <button
             onClick={handleArchive}
             className="flex w-full items-center px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100"
           >
@@ -123,10 +128,11 @@ const RequestActionsMenu: React.FC<RequestActionsMenuProps> = ({ requestId, empl
           
           <button
             onClick={handleDelete}
-            className="flex w-full items-center px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50"
+            disabled={isDeleting}
+            className="flex w-full items-center px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Trash2 size={16} className="mr-3" />
-            Delete
+            {isDeleting ? 'Deleting...' : 'Delete'}
           </button>
         </div>
       )}

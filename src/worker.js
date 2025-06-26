@@ -1079,6 +1079,44 @@ app.patch('/api/requests/:id/status', authMiddleware, managerOrAdminMiddleware, 
   }
 })
 
+// DELETE request endpoint
+app.delete('/api/requests/:id', authMiddleware, async (c) => {
+  try {
+    const user = c.get('user')
+    const { id } = c.req.param()
+    
+    // Get the request to check permissions
+    const request = await c.env.DB.prepare(`
+      SELECT employee_id, status
+      FROM time_off_requests
+      WHERE id = ?
+    `).bind(id).first()
+    
+    if (!request) {
+      return c.json({ message: 'Request not found' }, 404)
+    }
+    
+    // Check if user has permission to delete this request
+    // Admins can delete any request
+    // Managers can delete any request
+    // Employees can only delete their own requests
+    if (user.role === 'employee' && request.employee_id !== user.id) {
+      return c.json({ message: 'You do not have permission to delete this request' }, 403)
+    }
+    
+    // Delete the request
+    await c.env.DB.prepare('DELETE FROM time_off_requests WHERE id = ?').bind(id).run()
+    
+    // Log the deletion
+    console.log(`✅ Request ${id} deleted by user ${user.id} (${user.name})`)
+    
+    return c.json({ message: 'Request deleted successfully' })
+  } catch (error) {
+    console.error('Delete request error:', error)
+    return c.json({ message: 'Failed to delete request' }, 500)
+  }
+})
+
 // Notifications routes
 app.get('/api/notifications', authMiddleware, async (c) => {
   try {
