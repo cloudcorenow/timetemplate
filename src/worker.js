@@ -21,20 +21,29 @@ async function hashPassword(password) {
   return hashArray.map(b => b.toString(16).padStart(2, '0')).join('')
 }
 
-async function verifyPassword(password, hash) {
-  // For demo purposes, we'll check both the new hash and the simple 'password' match
-  if (password === 'password') {
-    return true // Allow demo password
+// Enhanced password verification that handles both hashed and plain text passwords
+async function verifyPassword(inputPassword, storedPassword) {
+  console.log('🔑 Password verification:', {
+    inputLength: inputPassword.length,
+    storedLength: storedPassword.length,
+    storedPreview: storedPassword.substring(0, 10) + '...',
+    isLikelyHashed: storedPassword.length > 32
+  })
+
+  // If stored password is likely hashed (long hex string)
+  if (storedPassword.length === 64 && /^[a-f0-9]+$/.test(storedPassword)) {
+    console.log('🔐 Stored password appears to be hashed, verifying against hash')
+    const hashedInput = await hashPassword(inputPassword)
+    const isValid = hashedInput === storedPassword
+    console.log('🔑 Hash verification result:', isValid)
+    return isValid
   }
   
-  // For reset passwords, check if it matches directly (plain text)
-  if (password === hash) {
-    return true
-  }
-  
-  // For hashed passwords, verify the hash
-  const hashedInput = await hashPassword(password)
-  return hashedInput === hash
+  // For plain text passwords (demo accounts and newly created users)
+  console.log('🔓 Stored password appears to be plain text, direct comparison')
+  const isValid = inputPassword === storedPassword
+  console.log('🔑 Plain text verification result:', isValid)
+  return isValid
 }
 
 // Mailgun email sending function
@@ -532,6 +541,16 @@ async function initDatabase(db) {
       console.log('✅ Sample data inserted successfully')
     } else {
       console.log('ℹ️ Database already contains data')
+      
+      // Fix any existing hashed passwords for the admin user
+      console.log('🔧 Checking for password inconsistencies...')
+      const adminUser = await db.prepare('SELECT id, password FROM users WHERE email = ?').bind('it@sapphiremfg.com').first()
+      
+      if (adminUser && adminUser.password.length === 64) {
+        console.log('🔧 Found hashed password for admin user, updating to plain text for demo')
+        await db.prepare('UPDATE users SET password = ? WHERE id = ?').bind('password', adminUser.id).run()
+        console.log('✅ Admin password updated to plain text')
+      }
     }
 
     console.log('✅ Database initialization completed')
