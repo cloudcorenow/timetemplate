@@ -646,41 +646,75 @@ app.get('/api/debug/email-config', authMiddleware, adminMiddleware, async (c) =>
   }
 })
 
-// Auth routes
+// Enhanced login endpoint with detailed logging
 app.post('/api/auth/login', async (c) => {
   try {
     const { email, password } = await c.req.json()
     
+    // Log request details for debugging
+    const requestInfo = {
+      host: c.req.header('host'),
+      origin: c.req.header('origin'),
+      userAgent: c.req.header('user-agent'),
+      referer: c.req.header('referer'),
+      url: c.req.url,
+      email: email,
+      timestamp: new Date().toISOString()
+    }
+    
+    console.log('🔐 Login attempt:', JSON.stringify(requestInfo, null, 2))
+    
     if (!email || !password) {
+      console.log('❌ Missing email or password')
       return c.json({ message: 'Email and password are required' }, 400)
     }
 
+    // Query database for user
+    console.log('🔍 Searching for user with email:', email.toLowerCase())
     const user = await c.env.DB.prepare(
       'SELECT * FROM users WHERE email = ?'
     ).bind(email.toLowerCase()).first()
 
     if (!user) {
+      console.log('❌ User not found for email:', email.toLowerCase())
+      
+      // Let's also check what users exist in the database
+      const allUsers = await c.env.DB.prepare('SELECT email FROM users').all()
+      console.log('📋 Available users in database:', allUsers.results.map(u => u.email))
+      
       return c.json({ message: 'Invalid credentials' }, 401)
     }
 
+    console.log('✅ User found:', {
+      id: user.id,
+      email: user.email,
+      role: user.role,
+      passwordLength: user.password.length
+    })
+
     const isValidPassword = await verifyPassword(password, user.password)
+    console.log('🔑 Password verification result:', isValidPassword)
     
     if (!isValidPassword) {
+      console.log('❌ Invalid password for user:', user.email)
       return c.json({ message: 'Invalid credentials' }, 401)
     }
 
     // Generate JWT token
+    console.log('🎫 Generating JWT token for user:', user.id)
     const token = await sign({ userId: user.id }, JWT_SECRET)
 
     // Remove password from response
     const { password: _, ...userWithoutPassword } = user
+
+    console.log('✅ Login successful for user:', user.email, 'from host:', requestInfo.host)
 
     return c.json({
       user: userWithoutPassword,
       token
     })
   } catch (error) {
-    console.error('Login error:', error)
+    console.error('💥 Login error:', error)
     return c.json({ message: 'Internal server error' }, 500)
   }
 })
