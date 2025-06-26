@@ -26,12 +26,15 @@ FROM_EMAIL = "noreply@timeoff-manager.com"
 # SMTP_SECURE = "false"                     # set as secret (true for port 465, false for 587)
 # SMTP_RELAY_URL = "https://your-smtp-relay.com/send"  # optional: custom SMTP relay service
 
+# Option 3: Mailgun configuration (set these as secrets)
+# MAILGUN_API_KEY = "your-mailgun-api-key"  # set as secret
+# MAILGUN_DOMAIN = "your-domain.com"        # set as secret
+
 [env.production]
 name = "timeoff-manager-prod"
 
 [env.staging]
 name = "timeoff-manager-staging"
 
-# Static assets configuration
-[assets]
-directory = "./dist"
+# Remove the assets configuration that's causing the issue
+# We'll handle static files differently in the worker
