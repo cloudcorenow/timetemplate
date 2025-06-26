@@ -8,6 +8,7 @@ import { useToast } from '../../hooks/useToast';
 import AnimatedCard from '../ui/AnimatedCard';
 import Badge from '../ui/Badge';
 import Button from '../ui/Button';
+import RequestActionsMenu from './RequestActionsMenu';
 
 interface EnhancedRequestCardProps {
   request: TimeOffRequest;
@@ -151,12 +152,10 @@ const EnhancedRequestCard: React.FC<EnhancedRequestCardProps> = ({ request, isMa
           
           <div className="flex items-center space-x-2">
             {getStatusBadge()}
-            <button
-              onClick={() => setShowMenu(!showMenu)}
-              className="rounded-full p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
-            >
-              <MoreVertical size={16} />
-            </button>
+            <RequestActionsMenu 
+              requestId={request.id} 
+              employeeName={request.employee.name} 
+            />
           </div>
         </div>
         

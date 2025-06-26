@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { format } from 'date-fns';
-import { Calendar, Clock, CheckCircle2, XCircle, Building2, ChevronDown, ChevronUp, User } from 'lucide-react';
+import { Calendar, Clock, CheckCircle2, XCircle, Building2, ChevronDown, ChevronUp, User, MoreVertical } from 'lucide-react';
 import { TimeOffRequest } from '../../types/request';
 import { useAuth } from '../../context/AuthContext';
 import { useRequestStore } from '../../store/requestStore';
@@ -8,6 +8,7 @@ import { useToast } from '../../hooks/useToast';
 import TouchOptimizedCard from './TouchOptimizedCard';
 import Badge from '../ui/Badge';
 import Button from '../ui/Button';
+import RequestActionsMenu from '../dashboard/RequestActionsMenu';
 
 interface MobileRequestCardProps {
   request: TimeOffRequest;
@@ -124,6 +125,10 @@ const MobileRequestCard: React.FC<MobileRequestCardProps> = ({ request, isManage
         
         <div className="flex items-center space-x-2 flex-shrink-0">
           {getStatusBadge()}
+          <RequestActionsMenu 
+            requestId={request.id} 
+            employeeName={request.employee.name} 
+          />
           {isExpanded ? 
             <ChevronUp size={16} className="text-gray-400 dark:text-gray-500" /> : 
             <ChevronDown size={16} className="text-gray-400 dark:text-gray-500" />
