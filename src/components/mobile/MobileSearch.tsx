@@ -118,25 +118,25 @@ const MobileSearch: React.FC<MobileSearchProps> = ({ isOpen, onClose }) => {
                     searchResults.departments.length > 0;
 
   return (
-    <div className="fixed inset-0 z-50 bg-white">
+    <div className="fixed inset-0 z-50 bg-white dark:bg-gray-900">
       {/* Header */}
-      <div className="border-b border-gray-200 px-4 py-3">
+      <div className="border-b border-gray-200 dark:border-gray-700 px-4 py-3">
         <form onSubmit={handleSearch} className="flex items-center">
           <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
+            <Search className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400 dark:text-gray-500" />
             <input
               type="text"
               placeholder="Search requests, employees..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full rounded-lg border border-gray-300 py-3 pl-10 pr-4 text-base focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 py-3 pl-10 pr-4 text-base text-gray-900 dark:text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:focus:ring-blue-400"
               autoFocus
             />
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="ml-3 rounded-lg p-2 text-gray-600 hover:bg-gray-100"
+            className="ml-3 rounded-lg p-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
           >
             <X size={20} />
           </button>
@@ -147,8 +147,8 @@ const MobileSearch: React.FC<MobileSearchProps> = ({ isOpen, onClose }) => {
       <div className="overflow-y-auto" style={{ height: 'calc(100% - 60px)' }}>
         {isSearching ? (
           <div className="flex items-center justify-center p-8">
-            <div className="h-6 w-6 animate-spin rounded-full border-2 border-t-blue-600"></div>
-            <p className="ml-2 text-gray-500">Searching...</p>
+            <div className="h-6 w-6 animate-spin rounded-full border-2 border-t-blue-600 dark:border-t-blue-400"></div>
+            <p className="ml-2 text-gray-500 dark:text-gray-400">Searching...</p>
           </div>
         ) : searchQuery.length > 2 ? (
           <div className="p-4">
@@ -157,13 +157,13 @@ const MobileSearch: React.FC<MobileSearchProps> = ({ isOpen, onClose }) => {
                 {/* Request Results */}
                 {searchResults.requests.length > 0 && (
                   <div>
-                    <h3 className="mb-3 text-sm font-medium text-gray-900">Requests</h3>
+                    <h3 className="mb-3 text-sm font-medium text-gray-900 dark:text-white">Requests</h3>
                     <div className="space-y-2">
                       {searchResults.requests.map((request) => (
                         <button
                           key={request.id}
                           onClick={() => handleResultClick('request', request)}
-                          className="flex w-full items-center justify-between rounded-lg border border-gray-200 p-3 text-left hover:bg-gray-50 active:bg-gray-100"
+                          className="flex w-full items-center justify-between rounded-lg border border-gray-200 dark:border-gray-700 p-3 text-left hover:bg-gray-50 dark:hover:bg-gray-800 active:bg-gray-100 dark:active:bg-gray-700"
                         >
                           <div className="flex items-center">
                             <div className="h-8 w-8 overflow-hidden rounded-full">
@@ -174,8 +174,8 @@ const MobileSearch: React.FC<MobileSearchProps> = ({ isOpen, onClose }) => {
                               />
                             </div>
                             <div className="ml-3">
-                              <p className="font-medium text-gray-900">{request.employee.name}</p>
-                              <p className="text-xs text-gray-500 line-clamp-1">{request.reason}</p>
+                              <p className="font-medium text-gray-900 dark:text-white">{request.employee.name}</p>
+                              <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-1">{request.reason}</p>
                             </div>
                           </div>
                           <div className="flex items-center">
@@ -188,7 +188,7 @@ const MobileSearch: React.FC<MobileSearchProps> = ({ isOpen, onClose }) => {
                             >
                               {request.status}
                             </Badge>
-                            <ArrowRight size={16} className="ml-2 text-gray-400" />
+                            <ArrowRight size={16} className="ml-2 text-gray-400 dark:text-gray-500" />
                           </div>
                         </button>
                       ))}
@@ -199,21 +199,21 @@ const MobileSearch: React.FC<MobileSearchProps> = ({ isOpen, onClose }) => {
                 {/* Department Results */}
                 {searchResults.departments.length > 0 && (
                   <div>
-                    <h3 className="mb-3 text-sm font-medium text-gray-900">Departments</h3>
+                    <h3 className="mb-3 text-sm font-medium text-gray-900 dark:text-white">Departments</h3>
                     <div className="space-y-2">
                       {searchResults.departments.map((department) => (
                         <button
                           key={department}
                           onClick={() => handleResultClick('department', department)}
-                          className="flex w-full items-center justify-between rounded-lg border border-gray-200 p-3 text-left hover:bg-gray-50 active:bg-gray-100"
+                          className="flex w-full items-center justify-between rounded-lg border border-gray-200 dark:border-gray-700 p-3 text-left hover:bg-gray-50 dark:hover:bg-gray-800 active:bg-gray-100 dark:active:bg-gray-700"
                         >
                           <div className="flex items-center">
-                            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100">
-                              <Building2 size={16} className="text-blue-600" />
+                            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900">
+                              <Building2 size={16} className="text-blue-600 dark:text-blue-400" />
                             </div>
-                            <p className="ml-3 font-medium text-gray-900">{department}</p>
+                            <p className="ml-3 font-medium text-gray-900 dark:text-white">{department}</p>
                           </div>
-                          <ArrowRight size={16} className="text-gray-400" />
+                          <ArrowRight size={16} className="text-gray-400 dark:text-gray-500" />
                         </button>
                       ))}
                     </div>
@@ -222,15 +222,15 @@ const MobileSearch: React.FC<MobileSearchProps> = ({ isOpen, onClose }) => {
               </div>
             ) : (
               <div className="py-8 text-center">
-                <Search className="mx-auto h-12 w-12 text-gray-300" />
-                <p className="mt-4 text-gray-500">No results found for "{searchQuery}"</p>
-                <p className="mt-2 text-sm text-gray-400">Try a different search term</p>
+                <Search className="mx-auto h-12 w-12 text-gray-300 dark:text-gray-600" />
+                <p className="mt-4 text-gray-500 dark:text-gray-400">No results found for "{searchQuery}"</p>
+                <p className="mt-2 text-sm text-gray-400 dark:text-gray-500">Try a different search term</p>
               </div>
             )}
           </div>
         ) : (
           <div className="p-4">
-            <h3 className="text-sm font-medium text-gray-900">Recent Searches</h3>
+            <h3 className="text-sm font-medium text-gray-900 dark:text-white">Recent Searches</h3>
             <div className="mt-3 space-y-2">
               {recentSearches.map((item, index) => (
                 <button
@@ -238,45 +238,45 @@ const MobileSearch: React.FC<MobileSearchProps> = ({ isOpen, onClose }) => {
                   onClick={() => {
                     setSearchQuery(item.text);
                   }}
-                  className="flex w-full items-center rounded-lg p-3 text-left hover:bg-gray-50 active:bg-gray-100"
+                  className="flex w-full items-center rounded-lg p-3 text-left hover:bg-gray-50 dark:hover:bg-gray-800 active:bg-gray-100 dark:active:bg-gray-700"
                 >
-                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100">
-                    <item.icon size={16} className="text-gray-600" />
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-800">
+                    <item.icon size={16} className="text-gray-600 dark:text-gray-400" />
                   </div>
-                  <span className="ml-3 text-sm text-gray-700">{item.text}</span>
+                  <span className="ml-3 text-sm text-gray-700 dark:text-gray-300">{item.text}</span>
                 </button>
               ))}
             </div>
             
-            <h3 className="mt-6 text-sm font-medium text-gray-900">Quick Filters</h3>
+            <h3 className="mt-6 text-sm font-medium text-gray-900 dark:text-white">Quick Filters</h3>
             <div className="mt-3 grid grid-cols-2 gap-2">
               <button
                 onClick={() => navigate('/?filter=pending')}
-                className="flex flex-col items-center rounded-lg border border-gray-200 p-3 hover:bg-gray-50 active:bg-gray-100"
+                className="flex flex-col items-center rounded-lg border border-gray-200 dark:border-gray-700 p-3 hover:bg-gray-50 dark:hover:bg-gray-800 active:bg-gray-100 dark:active:bg-gray-700"
               >
                 <Clock size={20} className="mb-1 text-amber-500" />
-                <span className="text-xs font-medium text-gray-700">Pending</span>
+                <span className="text-xs font-medium text-gray-700 dark:text-gray-300">Pending</span>
               </button>
               <button
                 onClick={() => navigate('/?filter=approved')}
-                className="flex flex-col items-center rounded-lg border border-gray-200 p-3 hover:bg-gray-50 active:bg-gray-100"
+                className="flex flex-col items-center rounded-lg border border-gray-200 dark:border-gray-700 p-3 hover:bg-gray-50 dark:hover:bg-gray-800 active:bg-gray-100 dark:active:bg-gray-700"
               >
                 <FileText size={20} className="mb-1 text-green-500" />
-                <span className="text-xs font-medium text-gray-700">Approved</span>
+                <span className="text-xs font-medium text-gray-700 dark:text-gray-300">Approved</span>
               </button>
               <button
                 onClick={() => navigate('/calendar')}
-                className="flex flex-col items-center rounded-lg border border-gray-200 p-3 hover:bg-gray-50 active:bg-gray-100"
+                className="flex flex-col items-center rounded-lg border border-gray-200 dark:border-gray-700 p-3 hover:bg-gray-50 dark:hover:bg-gray-800 active:bg-gray-100 dark:active:bg-gray-700"
               >
                 <Calendar size={20} className="mb-1 text-blue-500" />
-                <span className="text-xs font-medium text-gray-700">Calendar</span>
+                <span className="text-xs font-medium text-gray-700 dark:text-gray-300">Calendar</span>
               </button>
               <button
                 onClick={() => navigate('/team')}
-                className="flex flex-col items-center rounded-lg border border-gray-200 p-3 hover:bg-gray-50 active:bg-gray-100"
+                className="flex flex-col items-center rounded-lg border border-gray-200 dark:border-gray-700 p-3 hover:bg-gray-50 dark:hover:bg-gray-800 active:bg-gray-100 dark:active:bg-gray-700"
               >
                 <User size={20} className="mb-1 text-purple-500" />
-                <span className="text-xs font-medium text-gray-700">Team</span>
+                <span className="text-xs font-medium text-gray-700 dark:text-gray-300">Team</span>
               </button>
             </div>
           </div>

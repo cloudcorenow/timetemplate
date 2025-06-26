@@ -16,7 +16,7 @@ const MobileBottomNav: React.FC = () => {
   ];
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-30 border-t border-gray-200 bg-white/95 backdrop-blur-sm shadow-lg md:hidden ios-safe-bottom">
+    <nav className="fixed bottom-0 left-0 right-0 z-30 border-t border-gray-200 dark:border-gray-700 bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm shadow-lg md:hidden ios-safe-bottom">
       <div className="flex">
         {navItems.map((item) => (
           <NavLink
@@ -25,24 +25,24 @@ const MobileBottomNav: React.FC = () => {
             className={({ isActive }) =>
               `flex flex-1 flex-col items-center justify-center py-2 px-1 transition-colors ${
                 isActive
-                  ? 'text-blue-600'
-                  : 'text-gray-600'
+                  ? 'text-blue-600 dark:text-blue-400'
+                  : 'text-gray-600 dark:text-gray-400'
               }`
             }
           >
             {({ isActive }) => (
               <>
                 {item.highlight ? (
-                  <div className="relative -mt-8 mb-1 flex h-12 w-12 items-center justify-center rounded-full bg-blue-600 text-white shadow-lg">
+                  <div className="relative -mt-8 mb-1 flex h-12 w-12 items-center justify-center rounded-full bg-blue-600 dark:bg-blue-500 text-white shadow-lg">
                     <item.icon size={24} />
                   </div>
                 ) : (
                   <item.icon 
                     size={20} 
-                    className={`mb-1 ${isActive ? 'text-blue-600' : 'text-gray-600'}`} 
+                    className={`mb-1 ${isActive ? 'text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-gray-400'}`} 
                   />
                 )}
-                <span className={`text-xs ${isActive ? 'text-blue-600 font-medium' : 'text-gray-600'}`}>
+                <span className={`text-xs ${isActive ? 'text-blue-600 dark:text-blue-400 font-medium' : 'text-gray-600 dark:text-gray-400'}`}>
                   {item.label}
                 </span>
               </>

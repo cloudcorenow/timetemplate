@@ -1,6 +1,7 @@
 /** @type {import('tailwindcss').Config} */
 export default {
   content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}'],
+  darkMode: 'class',
   theme: {
     extend: {
       screens: {
@@ -30,6 +31,7 @@ export default {
         'fade-in': 'fadeIn 0.6s ease-out forwards',
         'slide-in-right': 'slideInRight 0.5s ease-out forwards',
         'slide-in-left': 'slideInLeft 0.5s ease-out forwards',
+        'slide-in-up': 'slideInUp 0.3s ease-out forwards',
         'scale-in': 'scaleIn 0.4s ease-out forwards',
         'pulse-slow': 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
       },

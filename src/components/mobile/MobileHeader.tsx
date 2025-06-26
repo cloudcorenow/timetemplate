@@ -51,26 +51,26 @@ const MobileHeader: React.FC<MobileHeaderProps> = ({
 
   return (
     <>
-      <header className="sticky top-0 z-30 border-b border-gray-200 bg-white/95 backdrop-blur-sm shadow-sm">
+      <header className="sticky top-0 z-30 border-b border-gray-200 dark:border-gray-700 bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm shadow-sm">
         <div className="flex h-14 items-center justify-between px-4">
           {/* Left side */}
           <div className="flex items-center">
             {showBackButton ? (
               <button
                 onClick={handleBackClick}
-                className="rounded-lg p-2 text-gray-600 hover:bg-gray-100 active:bg-gray-200"
+                className="rounded-lg p-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 active:bg-gray-200 dark:active:bg-gray-700"
               >
                 <ChevronLeft size={20} />
               </button>
             ) : (
               <button
                 onClick={onMenuClick}
-                className="rounded-lg p-2 text-gray-600 hover:bg-gray-100 active:bg-gray-200"
+                className="rounded-lg p-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 active:bg-gray-200 dark:active:bg-gray-700"
               >
                 <Menu size={20} />
               </button>
             )}
-            <h1 className="ml-2 text-lg font-semibold text-gray-900 truncate">
+            <h1 className="ml-2 text-lg font-semibold text-gray-900 dark:text-white truncate">
               {getTitle()}
             </h1>
           </div>
@@ -79,7 +79,7 @@ const MobileHeader: React.FC<MobileHeaderProps> = ({
           <div className="flex items-center space-x-1">
             <button
               onClick={() => setShowSearch(true)}
-              className="rounded-lg p-2 text-gray-600 hover:bg-gray-100 active:bg-gray-200"
+              className="rounded-lg p-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 active:bg-gray-200 dark:active:bg-gray-700"
             >
               <Search size={20} />
             </button>
@@ -87,7 +87,7 @@ const MobileHeader: React.FC<MobileHeaderProps> = ({
             <div className="relative">
               <button
                 onClick={() => setShowNotifications(!showNotifications)}
-                className="relative rounded-lg p-2 text-gray-600 hover:bg-gray-100 active:bg-gray-200"
+                className="relative rounded-lg p-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 active:bg-gray-200 dark:active:bg-gray-700"
               >
                 <Bell size={20} />
                 {unreadCount > 0 && (
@@ -102,7 +102,7 @@ const MobileHeader: React.FC<MobileHeaderProps> = ({
               />
             </div>
 
-            <div className="h-8 w-8 overflow-hidden rounded-full border border-gray-200">
+            <div className="h-8 w-8 overflow-hidden rounded-full border border-gray-200 dark:border-gray-700">
               <img 
                 src={user?.avatar || "https://images.pexels.com/photos/1438081/pexels-photo-1438081.jpeg?auto=compress&cs=tinysrgb&w=300"} 
                 alt="User avatar" 
@@ -118,7 +118,7 @@ const MobileHeader: React.FC<MobileHeaderProps> = ({
             <Badge variant="info" size="sm">
               {user?.role === 'admin' ? 'Admin' : user?.role === 'manager' ? 'Manager' : 'Employee'}
             </Badge>
-            <span className="ml-2 text-xs text-gray-500">{user?.department}</span>
+            <span className="ml-2 text-xs text-gray-500 dark:text-gray-400">{user?.department}</span>
           </div>
         )}
       </header>

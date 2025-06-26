@@ -3,6 +3,7 @@ import { X, Upload, Mail, LogOut, Camera, User, Settings, Moon, Sun, HelpCircle 
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '../../hooks/useToast';
+import { useDarkMode } from '../../hooks/useDarkMode';
 import Button from '../ui/Button';
 import Badge from '../ui/Badge';
 import ImageUpload from '../ui/ImageUpload';
@@ -19,7 +20,7 @@ const MobileUserMenu: React.FC<MobileUserMenuProps> = ({ isOpen, onClose }) => {
   const { addToast } = useToast();
   const [showEmailSettings, setShowEmailSettings] = useState(false);
   const [isUpdatingAvatar, setIsUpdatingAvatar] = useState(false);
-  const [darkMode, setDarkMode] = useState(false);
+  const { darkMode, toggleDarkMode } = useDarkMode();
 
   const handleLogout = () => {
     logout();
@@ -59,17 +60,17 @@ const MobileUserMenu: React.FC<MobileUserMenuProps> = ({ isOpen, onClose }) => {
   return (
     <>
       <div 
-        className="fixed inset-0 z-50 bg-black bg-opacity-50 md:hidden"
+        className="fixed inset-0 z-50 bg-black bg-opacity-50 dark:bg-opacity-70 md:hidden"
         onClick={onClose}
       />
       
-      <div className="fixed inset-y-0 right-0 z-50 w-full max-w-sm transform bg-white shadow-xl transition-transform duration-300 ease-in-out md:hidden">
+      <div className="fixed inset-y-0 right-0 z-50 w-full max-w-sm transform bg-white dark:bg-gray-900 shadow-xl transition-transform duration-300 ease-in-out md:hidden">
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-gray-200 px-4 py-3">
-          <h2 className="text-lg font-semibold text-gray-900">Your Profile</h2>
+        <div className="flex items-center justify-between border-b border-gray-200 dark:border-gray-700 px-4 py-3">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Your Profile</h2>
           <button
             onClick={onClose}
-            className="rounded-lg p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+            className="rounded-lg p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800 dark:hover:text-gray-300"
           >
             <X size={20} />
           </button>
@@ -87,8 +88,8 @@ const MobileUserMenu: React.FC<MobileUserMenuProps> = ({ isOpen, onClose }) => {
               />
             </div>
             
-            <h3 className="text-xl font-semibold text-gray-900">{user?.name}</h3>
-            <p className="text-gray-600">{user?.email}</p>
+            <h3 className="text-xl font-semibold text-gray-900 dark:text-white">{user?.name}</h3>
+            <p className="text-gray-600 dark:text-gray-400">{user?.email}</p>
             
             <div className="mt-2 flex items-center space-x-2">
               <Badge 
@@ -97,44 +98,44 @@ const MobileUserMenu: React.FC<MobileUserMenuProps> = ({ isOpen, onClose }) => {
               >
                 {user?.role}
               </Badge>
-              <span className="text-sm text-gray-500">{user?.department}</span>
+              <span className="text-sm text-gray-500 dark:text-gray-400">{user?.department}</span>
             </div>
           </div>
         </div>
         
         {/* Menu Items */}
-        <div className="border-t border-gray-200 px-4 py-4">
+        <div className="border-t border-gray-200 dark:border-gray-700 px-4 py-4">
           <div className="space-y-2">
             <button
               onClick={() => setShowEmailSettings(true)}
-              className="flex w-full items-center rounded-lg px-4 py-3 text-left text-sm font-medium text-gray-700 hover:bg-gray-100"
+              className="flex w-full items-center rounded-lg px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800"
             >
-              <Mail size={20} className="mr-3 text-gray-500" />
+              <Mail size={20} className="mr-3 text-gray-500 dark:text-gray-400" />
               Email Preferences
             </button>
             
             <button
-              className="flex w-full items-center rounded-lg px-4 py-3 text-left text-sm font-medium text-gray-700 hover:bg-gray-100"
+              className="flex w-full items-center rounded-lg px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800"
             >
-              <Settings size={20} className="mr-3 text-gray-500" />
+              <Settings size={20} className="mr-3 text-gray-500 dark:text-gray-400" />
               Account Settings
             </button>
             
             <button
-              className="flex w-full items-center rounded-lg px-4 py-3 text-left text-sm font-medium text-gray-700 hover:bg-gray-100"
+              className="flex w-full items-center rounded-lg px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800"
             >
-              <HelpCircle size={20} className="mr-3 text-gray-500" />
+              <HelpCircle size={20} className="mr-3 text-gray-500 dark:text-gray-400" />
               Help & Support
             </button>
             
             <button
-              onClick={() => setDarkMode(!darkMode)}
-              className="flex w-full items-center rounded-lg px-4 py-3 text-left text-sm font-medium text-gray-700 hover:bg-gray-100"
+              onClick={toggleDarkMode}
+              className="flex w-full items-center rounded-lg px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800"
             >
               {darkMode ? (
-                <Sun size={20} className="mr-3 text-gray-500" />
+                <Sun size={20} className="mr-3 text-amber-500" />
               ) : (
-                <Moon size={20} className="mr-3 text-gray-500" />
+                <Moon size={20} className="mr-3 text-blue-500" />
               )}
               {darkMode ? 'Light Mode' : 'Dark Mode'}
             </button>
@@ -142,7 +143,7 @@ const MobileUserMenu: React.FC<MobileUserMenuProps> = ({ isOpen, onClose }) => {
         </div>
         
         {/* Logout Button */}
-        <div className="absolute bottom-0 left-0 right-0 border-t border-gray-200 p-4">
+        <div className="absolute bottom-0 left-0 right-0 border-t border-gray-200 dark:border-gray-700 p-4 ios-safe-bottom">
           <Button
             variant="danger"
             onClick={handleLogout}
