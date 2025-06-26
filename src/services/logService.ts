@@ -48,18 +48,6 @@ export const addLog = (
   // Add to in-memory storage
   logs = [logEntry, ...logs].slice(0, MAX_LOGS);
   
-  // Log to console for development
-  if (process.env.NODE_ENV === 'development') {
-    const consoleMethod = {
-      info: console.info,
-      warning: console.warn,
-      error: console.error,
-      debug: console.debug
-    }[level] || console.log;
-    
-    consoleMethod(`[${category.toUpperCase()}] ${message}`, details || '');
-  }
-  
   return logEntry;
 };
 
