@@ -620,29 +620,10 @@ app.use('*', async (c, next) => {
   await next()
 })
 
-// Debug endpoint to check users
-app.get('/api/debug/users', async (c) => {
-  try {
-    const users = await c.env.DB.prepare('SELECT id, email, role, password FROM users').all()
-    
-    return c.json({
-      host: c.req.header('host'),
-      url: c.req.url,
-      users: users.results.map(u => ({
-        id: u.id,
-        email: u.email,
-        role: u.role,
-        passwordLength: u.password.length,
-        passwordPreview: u.password.substring(0, 10) + '...'
-      }))
-    })
-  } catch (error) {
-    console.error('Debug users error:', error)
-    return c.json({ error: error.message }, 500)
-  }
-})
+// REMOVED: Debug endpoint that exposed passwords
+// This endpoint was a security vulnerability and has been disabled
 
-// Email configuration debug endpoint
+// Email configuration debug endpoint (admin only)
 app.get('/api/debug/email-config', authMiddleware, adminMiddleware, async (c) => {
   try {
     const config = {
@@ -665,12 +646,46 @@ app.get('/api/debug/email-config', authMiddleware, adminMiddleware, async (c) =>
   }
 })
 
+// System status endpoint (admin only) - secure version
+app.get('/api/debug/system-status', authMiddleware, adminMiddleware, async (c) => {
+  try {
+    // Get basic system information without exposing sensitive data
+    const userCount = await c.env.DB.prepare('SELECT COUNT(*) as count FROM users').first()
+    const requestCount = await c.env.DB.prepare('SELECT COUNT(*) as count FROM time_off_requests').first()
+    const notificationCount = await c.env.DB.prepare('SELECT COUNT(*) as count FROM notifications').first()
+    
+    const status = {
+      timestamp: new Date().toISOString(),
+      database: {
+        connected: true,
+        userCount: userCount.count,
+        requestCount: requestCount.count,
+        notificationCount: notificationCount.count
+      },
+      email: {
+        hasMailgun: !!(c.env.MAILGUN_API_KEY && c.env.MAILGUN_DOMAIN),
+        hasAPIService: !!(c.env.EMAIL_SERVICE && c.env.EMAIL_API_KEY),
+        hasSMTPService: !!(c.env.SMTP_HOST && c.env.SMTP_USER && c.env.SMTP_PASS)
+      },
+      environment: {
+        nodeEnv: c.env.NODE_ENV || 'development',
+        appUrl: c.env.APP_URL || 'Not configured'
+      }
+    }
+    
+    return c.json(status)
+  } catch (error) {
+    console.error('System status error:', error)
+    return c.json({ error: 'Failed to get system status' }, 500)
+  }
+})
+
 // Enhanced login endpoint with detailed logging
 app.post('/api/auth/login', async (c) => {
   try {
     const { email, password } = await c.req.json()
     
-    // Log request details for debugging
+    // Log request details for debugging (without sensitive data)
     const requestInfo = {
       host: c.req.header('host'),
       origin: c.req.header('origin'),
@@ -696,11 +711,6 @@ app.post('/api/auth/login', async (c) => {
 
     if (!user) {
       console.log('❌ User not found for email:', email.toLowerCase())
-      
-      // Let's also check what users exist in the database
-      const allUsers = await c.env.DB.prepare('SELECT email FROM users').all()
-      console.log('📋 Available users in database:', allUsers.results.map(u => u.email))
-      
       return c.json({ message: 'Invalid credentials' }, 401)
     }
 
