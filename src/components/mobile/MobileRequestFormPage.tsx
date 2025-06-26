@@ -464,8 +464,8 @@ const MobileRequestFormPage: React.FC = () => {
         {renderStep()}
       </div>
 
-      {/* Bottom Actions */}
-      <div className="fixed bottom-0 left-0 right-0 border-t border-gray-200 dark:border-gray-700 bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm p-4 ios-safe-bottom">
+      {/* Bottom Actions - Fixed positioning with proper z-index and iOS safe area */}
+      <div className="fixed bottom-0 left-0 right-0 z-20 border-t border-gray-200 dark:border-gray-700 bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm p-4 ios-safe-bottom">
         <div className="flex space-x-3">
           {currentStep > 1 && (
             <Button
@@ -499,7 +499,7 @@ const MobileRequestFormPage: React.FC = () => {
       </div>
 
       {/* Bottom padding to account for fixed button */}
-      <div className="h-20" />
+      <div className="h-28" />
     </div>
   );
 };
