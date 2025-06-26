@@ -13,6 +13,7 @@ const LoginPage: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [loginError, setLoginError] = useState<string | null>(null);
   const navigate = useNavigate();
   const { login, isAuthenticated } = useAuth();
   const { addToast } = useToast();
@@ -25,12 +26,10 @@ const LoginPage: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setLoginError(null);
+    
     if (!email || !password) {
-      addToast({
-        type: 'error',
-        title: 'Missing Information',
-        message: 'Please enter both email and password'
-      });
+      setLoginError('Please enter both email and password');
       return;
     }
 
@@ -46,18 +45,10 @@ const LoginPage: React.FC = () => {
         });
         navigate('/');
       } else {
-        addToast({
-          type: 'error',
-          title: 'Login Failed',
-          message: 'Invalid email or password. Please check your credentials and try again.'
-        });
+        setLoginError('Invalid email or password. Please check your credentials and try again.');
       }
-    } catch (err) {
-      addToast({
-        type: 'error',
-        title: 'Login Error',
-        message: 'An error occurred during login. Please try again.'
-      });
+    } catch (err: any) {
+      setLoginError(err.message || 'An error occurred during login. Please try again.');
       console.error(err);
     } finally {
       setIsLoading(false);
@@ -81,6 +72,12 @@ const LoginPage: React.FC = () => {
 
         <div className="mt-8 rounded-2xl bg-white p-8 shadow-xl animate-scale-in">
           <form className="space-y-6" onSubmit={handleSubmit}>
+            {loginError && (
+              <div className="rounded-md bg-red-50 p-4 text-sm text-red-700">
+                {loginError}
+              </div>
+            )}
+            
             <div>
               <label 
                 htmlFor="email" 

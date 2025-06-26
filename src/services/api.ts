@@ -37,15 +37,20 @@ class ApiService {
 
   // Auth methods
   async login(email: string, password: string) {
-    const response = await this.request('/auth/login', {
-      method: 'POST',
-      body: JSON.stringify({ email, password }),
-    });
-    
-    this.token = response.token;
-    localStorage.setItem('token', response.token);
-    
-    return response;
+    try {
+      const response = await this.request('/auth/login', {
+        method: 'POST',
+        body: JSON.stringify({ email, password }),
+      });
+      
+      this.token = response.token;
+      localStorage.setItem('token', response.token);
+      
+      return response;
+    } catch (error) {
+      console.error('Login error:', error);
+      throw error;
+    }
   }
 
   async getCurrentUser() {
