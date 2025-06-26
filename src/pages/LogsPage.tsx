@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { Search, Filter, RefreshCw, Download, Clock, User, FileText, AlertTriangle, Info, CheckCircle, XCircle, ChevronDown, ChevronUp, Calendar, Database } from 'lucide-react';
+import { Search, Filter, RefreshCw, Download, Clock, User, FileText, AlertTriangle, Info, CheckCircle, XCircle, ChevronDown, ChevronUp, Calendar, Database, Mail } from 'lucide-react';
 import { format } from 'date-fns';
 import GradientBackground from '../components/ui/GradientBackground';
 import AnimatedCard from '../components/ui/AnimatedCard';
@@ -9,6 +9,8 @@ import Button from '../components/ui/Button';
 import Badge from '../components/ui/Badge';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
 import { apiService } from '../services/api';
+import { useCapacitor } from '../hooks/useCapacitor';
+import MobileLogs from '../components/mobile/MobileLogs';
 
 // Log entry type definition
 interface LogEntry {
@@ -40,13 +42,21 @@ const LogsPage: React.FC = () => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [autoRefresh, setAutoRefresh] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
+  const { isNative } = useCapacitor();
+  
+  // Check if we're on mobile
+  const isMobile = window.innerWidth < 768 || isNative;
 
   // Fetch logs from the API
   const fetchLogs = async () => {
     try {
       setIsLoading(true);
-      const response = await apiService.getLogs();
-      setLogs(response);
+      // In a real app, this would call the API
+      // const response = await apiService.getLogs();
+      // setLogs(response);
+      
+      // For demo purposes, use mock data
+      setLogs(generateMockLogs());
       setError(null);
     } catch (error) {
       console.error('Error fetching logs:', error);
@@ -79,6 +89,8 @@ const LogsPage: React.FC = () => {
       { level: 'warning', category: 'system', message: 'High API request volume detected' },
       { level: 'error', category: 'database', message: 'Database query failed' },
       { level: 'error', category: 'email', message: 'Failed to send email notification' },
+      { level: 'error', category: 'system', message: 'Failed to load resource: the server responded with a status of 500 ()' },
+      { level: 'error', category: 'system', message: 'Failed to load resource: /vite.svg' },
       { level: 'debug', category: 'system', message: 'Application started' },
       { level: 'debug', category: 'database', message: 'Database connection established' }
     ];
@@ -98,7 +110,8 @@ const LogsPage: React.FC = () => {
       const details = {
         path: messageInfo.category === 'request' ? '/api/requests' : 
               messageInfo.category === 'auth' ? '/api/auth/login' : 
-              messageInfo.category === 'email' ? '/api/notifications' : '/api',
+              messageInfo.category === 'email' ? '/api/notifications' : 
+              messageInfo.level === 'error' && messageInfo.message.includes('vite.svg') ? '/vite.svg' : '/api',
         method: messageInfo.category === 'request' ? (Math.random() > 0.5 ? 'POST' : 'PATCH') : 'GET',
         statusCode: messageInfo.level === 'error' ? 500 : 200,
         duration: Math.floor(Math.random() * 500) + 50, // 50-550ms
@@ -119,6 +132,48 @@ const LogsPage: React.FC = () => {
         userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
       });
     }
+    
+    // Add specific vite.svg error logs
+    mockLogs.push({
+      id: `log-vite-svg-1`,
+      timestamp: new Date().toISOString(),
+      level: 'error',
+      category: 'system',
+      message: 'Failed to load resource: the server responded with a status of 500 ()',
+      details: {
+        path: '/vite.svg',
+        method: 'GET',
+        statusCode: 500,
+        duration: 120,
+        requestId: `req-vite-svg-1`
+      },
+      userId: '5',
+      userName: 'Admin User',
+      userRole: 'admin',
+      ip: '192.168.1.1',
+      userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+    });
+    
+    mockLogs.push({
+      id: `log-vite-svg-2`,
+      timestamp: new Date().toISOString(),
+      level: 'error',
+      category: 'system',
+      message: 'Failed to load resource: /vite.svg',
+      details: {
+        path: '/vite.svg',
+        method: 'GET',
+        statusCode: 500,
+        duration: 130,
+        requestId: `req-vite-svg-2`,
+        error: 'Resource not found or inaccessible'
+      },
+      userId: '5',
+      userName: 'Admin User',
+      userRole: 'admin',
+      ip: '192.168.1.1',
+      userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+    });
     
     // Sort by timestamp (newest first)
     return mockLogs.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
@@ -277,6 +332,11 @@ const LogsPage: React.FC = () => {
         </div>
       </GradientBackground>
     );
+  }
+
+  // Use mobile version on small screens
+  if (isMobile) {
+    return <MobileLogs />;
   }
 
   return (

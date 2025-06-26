@@ -181,6 +181,7 @@ class ApiService {
   logout() {
     this.token = null;
     localStorage.removeItem('token');
+    localStorage.removeItem('currentUser');
   }
 
   setToken(token: string) {
