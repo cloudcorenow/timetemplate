@@ -354,25 +354,43 @@ async function sendEmailNotification(env, to, subject, message, type = 'info', a
   }
 }
 
-// Enhanced notification creation with email support
+// Enhanced notification creation with email support - FIXED VERSION
 async function createNotification(env, userId, type, message, emailSubject = null, actionUrl = null) {
   try {
+    console.log('🔔 === CREATING NOTIFICATION ===')
+    console.log('User ID:', userId)
+    console.log('Type:', type)
+    console.log('Message:', message)
+    console.log('Email Subject:', emailSubject)
+    
     // Create in-app notification
     const notificationId = crypto.randomUUID()
-    await env.DB.prepare(`
+    const notificationResult = await env.DB.prepare(`
       INSERT INTO notifications (id, user_id, type, message)
       VALUES (?, ?, ?, ?)
     `).bind(notificationId, userId, type, message).run()
 
-    // Get user email preferences
+    console.log('✅ In-app notification created:', notificationResult)
+
+    // Get user email preferences and info
     const user = await env.DB.prepare(
       'SELECT email, name, email_notifications FROM users WHERE id = ?'
     ).bind(userId).first()
 
+    console.log('👤 User found:', user ? `${user.name} (${user.email})` : 'Not found')
+    console.log('📧 Email notifications enabled:', user?.email_notifications !== false)
+
     // Send email if user exists and has email notifications enabled (default to true)
     if (user && user.email && (user.email_notifications !== false)) {
+      console.log('📧 Attempting to send email notification...')
+      
       const subject = emailSubject || getEmailSubject(type, message)
       const enhancedMessage = `Hi ${user.name},\n\n${message}\n\nBest regards,\nTimeOff Manager Team`
+      
+      console.log('📧 Email details:')
+      console.log('  To:', user.email)
+      console.log('  Subject:', subject)
+      console.log('  Enhanced Message:', enhancedMessage)
       
       const emailSent = await sendEmailNotification(
         env,
@@ -384,15 +402,23 @@ async function createNotification(env, userId, type, message, emailSubject = nul
       )
 
       if (emailSent) {
-        console.log(`✅ Email notification sent to ${user.email}`)
+        console.log(`✅ Email notification sent successfully to ${user.email}`)
       } else {
         console.log(`⚠️ Email notification failed for ${user.email}`)
+      }
+    } else {
+      if (!user) {
+        console.log('⚠️ User not found, skipping email')
+      } else if (!user.email) {
+        console.log('⚠️ User has no email address, skipping email')
+      } else {
+        console.log('⚠️ User has email notifications disabled, skipping email')
       }
     }
 
     return notificationId
   } catch (error) {
-    console.error('Error creating notification:', error)
+    console.error('❌ Error creating notification:', error)
     throw error
   }
 }
@@ -1117,14 +1143,16 @@ app.put('/api/users/:id', authMiddleware, adminMiddleware, async (c) => {
   }
 })
 
-// Reset user password - FIXED VERSION
+// Reset user password - FIXED VERSION WITH ENHANCED DEBUGGING
 app.patch('/api/users/:id/password', authMiddleware, adminMiddleware, async (c) => {
   try {
     const { id } = c.req.param()
     const { password } = await c.req.json()
 
+    console.log('🔑 === PASSWORD RESET DEBUG ===')
     console.log('🔑 Password reset request for user:', id)
     console.log('🔑 New password:', password)
+    console.log('🔑 Admin user:', c.get('user').name)
 
     if (!password || password.length < 4) {
       console.log('❌ Password validation failed')
@@ -1158,18 +1186,23 @@ app.patch('/api/users/:id/password', authMiddleware, adminMiddleware, async (c) 
       return c.json({ message: 'Failed to update password' }, 500)
     }
 
-    console.log('✅ Password updated successfully')
+    console.log('✅ Password updated successfully in database')
+
+    // Create enhanced notification message with the new password
+    const notificationMessage = `Your password has been reset by an administrator. Your new password is: "${password}". Please log in with this password and consider changing it to something more secure.`
+    
+    console.log('🔔 Creating notification with message:', notificationMessage)
 
     // Add notification for the user with email
     try {
-      await createNotification(
+      const notificationId = await createNotification(
         c.env,
         id,
         'warning',
-        `Your password has been reset by an administrator. Your new password is: ${password}. Please log in with this password and consider changing it to something more secure.`,
+        notificationMessage,
         '🔑 Your Password Has Been Reset'
       )
-      console.log('✅ Notification sent')
+      console.log('✅ Notification created with ID:', notificationId)
     } catch (notificationError) {
       console.error('⚠️ Failed to send notification:', notificationError)
       // Don't fail the password reset if notification fails
@@ -1180,7 +1213,9 @@ app.patch('/api/users/:id/password', authMiddleware, adminMiddleware, async (c) 
       details: {
         userId: id,
         userName: existingUser.name,
-        newPassword: password
+        userEmail: existingUser.email,
+        newPassword: password,
+        timestamp: new Date().toISOString()
       }
     })
   } catch (error) {
@@ -1309,7 +1344,9 @@ app.post('/api/test-email', authMiddleware, adminMiddleware, async (c) => {
       return c.json({ message: 'Missing required fields: to, subject, message' }, 400)
     }
 
+    console.log('📧 === TEST EMAIL DEBUG ===')
     console.log('📧 Test email request:', { to, subject, type })
+    console.log('📧 Message:', message)
 
     const success = await sendEmailNotification(
       c.env,
