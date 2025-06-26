@@ -2,6 +2,7 @@ import React from 'react';
 import { Outlet } from 'react-router-dom';
 import Header from './Header';
 import Sidebar from './Sidebar';
+import CacheDebugPanel from '../debug/CacheDebugPanel';
 import { useAuth } from '../../context/AuthContext';
 
 const Layout: React.FC = () => {
@@ -30,6 +31,9 @@ const Layout: React.FC = () => {
           <Outlet />
         </main>
       </div>
+
+      {/* Cache Debug Panel (only in development) */}
+      {process.env.NODE_ENV === 'development' && <CacheDebugPanel />}
     </div>
   );
 };

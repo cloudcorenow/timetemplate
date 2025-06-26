@@ -2,16 +2,17 @@ import React, { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useRequestStore } from '../store/requestStore';
 import { TimeOffRequest } from '../types/request';
-import { Check, X, CalendarDays, Users, Clock, Plus } from 'lucide-react';
+import { Check, X, CalendarDays, Users, Clock, Plus, RefreshCw } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import StatsCard from '../components/dashboard/StatsCard';
 import RequestList from '../components/dashboard/RequestList';
 
 const DashboardPage: React.FC = () => {
   const { user, isManager, isAdmin } = useAuth();
-  const { requests, fetchRequests, isLoading } = useRequestStore();
+  const { requests, fetchRequests, isLoading, forceRefresh, getCacheInfo } = useRequestStore();
   const [filteredRequests, setFilteredRequests] = useState<TimeOffRequest[]>([]);
   const [activeFilter, setActiveFilter] = useState<string>('all');
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -30,6 +31,15 @@ const DashboardPage: React.FC = () => {
       );
     }
   }, [requests, user, isManager, isAdmin]);
+
+  const handleForceRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await forceRefresh();
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
 
   const filterRequests = (filter: string) => {
     setActiveFilter(filter);
@@ -76,7 +86,12 @@ const DashboardPage: React.FC = () => {
     ? new Set(requests.map(r => r.employee.id)).size
     : 0;
 
-  if (isLoading) {
+  // Get cache info for debugging
+  const cacheInfo = getCacheInfo();
+  const requestsCacheAge = cacheInfo.requests?.age || 0;
+  const requestsCacheFresh = cacheInfo.requests?.fresh || false;
+
+  if (isLoading && requests.length === 0) {
     return (
       <div className="flex h-full items-center justify-center">
         <div className="text-center">
@@ -101,17 +116,40 @@ const DashboardPage: React.FC = () => {
               ? 'Manage time off requests across the organization'
               : 'View and manage your time off requests'}
           </p>
+          
+          {/* Cache status indicator */}
+          {requestsCacheAge > 0 && (
+            <div className="mt-1 flex items-center text-xs text-gray-500">
+              <Clock size={12} className="mr-1" />
+              Data cached {requestsCacheAge}s ago
+              {!requestsCacheFresh && (
+                <span className="ml-1 text-orange-600">(stale)</span>
+              )}
+            </div>
+          )}
         </div>
         
-        {!isManager && !isAdmin && (
+        <div className="flex items-center space-x-2">
           <button
-            onClick={() => navigate('/request')}
-            className="flex items-center rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+            onClick={handleForceRefresh}
+            disabled={isRefreshing}
+            className="flex items-center rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+            title="Force refresh data"
           >
-            <Plus size={16} className="mr-2" />
-            New Request
+            <RefreshCw size={16} className={`mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
+            {isRefreshing ? 'Refreshing...' : 'Refresh'}
           </button>
-        )}
+          
+          {!isManager && !isAdmin && (
+            <button
+              onClick={() => navigate('/request')}
+              className="flex items-center rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+            >
+              <Plus size={16} className="mr-2" />
+              New Request
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Stats Section */}
