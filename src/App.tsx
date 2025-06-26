@@ -4,13 +4,15 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 // Pages
 import LoginPage from './pages/LoginPage';
 import EnhancedDashboardPage from './pages/EnhancedDashboardPage';
+import MobileDashboard from './components/mobile/MobileDashboard';
 import CalendarPage from './pages/CalendarPage';
 import RequestFormPage from './pages/RequestFormPage';
+import MobileRequestFormPage from './pages/MobileRequestFormPage';
 import TeamOverviewPage from './pages/TeamOverviewPage';
 import EmployeeManagementPage from './pages/EmployeeManagementPage';
 
 // Components
-import Layout from './components/layout/Layout';
+import ResponsiveLayout from './components/layout/ResponsiveLayout';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import MobileOptimizations from './components/mobile/MobileOptimizations';
 import ToastContainer from './components/ui/ToastContainer';
@@ -24,6 +26,10 @@ import { useToast } from './hooks/useToast';
 
 function AppContent() {
   const { toasts, removeToast } = useToast();
+  const { isNative } = useCapacitor();
+
+  // Determine if we should use mobile layout
+  const isMobile = window.innerWidth < 768 || isNative;
 
   return (
     <>
@@ -34,13 +40,14 @@ function AppContent() {
             path="/" 
             element={
               <ProtectedRoute>
-                <Layout />
+                <ResponsiveLayout />
               </ProtectedRoute>
             }
           >
-            <Route index element={<EnhancedDashboardPage />} />
+            {/* Mobile-specific routes */}
+            <Route index element={isMobile ? <MobileDashboard /> : <EnhancedDashboardPage />} />
             <Route path="calendar" element={<CalendarPage />} />
-            <Route path="request" element={<RequestFormPage />} />
+            <Route path="request" element={isMobile ? <MobileRequestFormPage /> : <RequestFormPage />} />
             <Route path="team" element={<TeamOverviewPage />} />
             <Route path="employees" element={<EmployeeManagementPage />} />
           </Route>

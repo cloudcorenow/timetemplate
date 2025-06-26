@@ -184,7 +184,8 @@
 }
 
 /* Touch-friendly button sizes for mobile */
-.native-app button {
+.native-app button,
+.mobile-touch-target {
   min-height: 44px; /* iOS recommended touch target size */
   min-width: 44px;
 }
@@ -210,6 +211,14 @@
     padding-left: max(0px, env(safe-area-inset-left));
     padding-right: max(0px, env(safe-area-inset-right));
   }
+  
+  .ios-safe-top {
+    padding-top: max(0px, env(safe-area-inset-top));
+  }
+  
+  .ios-safe-bottom {
+    padding-bottom: max(0px, env(safe-area-inset-bottom));
+  }
 }
 
 /* Responsive text sizes for mobile */
@@ -223,6 +232,17 @@
   .native-app select {
     font-size: 16px; /* Prevent zoom on iOS */
   }
+  
+  /* Mobile-specific calendar adjustments */
+  .rdp {
+    --rdp-cell-size: 36px;
+  }
+  
+  /* Larger touch targets for mobile */
+  .mobile-touch-target {
+    min-height: 48px;
+    min-width: 48px;
+  }
 }
 
 /* Focus styles for accessibility */
@@ -230,13 +250,15 @@
   @apply focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2;
 }
 
-/* Hover effects */
-.hover-lift {
-  transition: transform 0.2s ease-in-out;
-}
+/* Hover effects - disabled on touch devices */
+@media (hover: hover) {
+  .hover-lift {
+    transition: transform 0.2s ease-in-out;
+  }
 
-.hover-lift:hover {
-  transform: translateY(-2px);
+  .hover-lift:hover {
+    transform: translateY(-2px);
+  }
 }
 
 /* Loading skeleton */
@@ -252,5 +274,75 @@
   }
   100% {
     background-position: -200% 0;
+  }
+}
+
+/* Mobile-specific improvements */
+@media (max-width: 768px) {
+  /* Larger tap targets */
+  button, 
+  .clickable {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  
+  /* Better spacing for mobile */
+  .mobile-spacing {
+    padding: 1rem;
+  }
+  
+  /* Mobile-friendly forms */
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="time"],
+  input[type="date"],
+  textarea,
+  select {
+    font-size: 16px !important; /* Prevent zoom on iOS */
+    padding: 12px 16px;
+    border-radius: 8px;
+  }
+  
+  /* Mobile navigation improvements */
+  .mobile-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 50;
+  }
+  
+  /* Mobile header improvements */
+  .mobile-header {
+    position: sticky;
+    top: 0;
+    z-index: 40;
+  }
+}
+
+/* Dark mode support for mobile */
+@media (prefers-color-scheme: dark) {
+  .native-app {
+    background-color: #1f2937;
+    color: #f9fafb;
+  }
+}
+
+/* Reduce motion for accessibility */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .focus-ring {
+    @apply focus:ring-4 focus:ring-yellow-400;
   }
 }
