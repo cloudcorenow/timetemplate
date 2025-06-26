@@ -37,6 +37,165 @@ async function verifyPassword(password, hash) {
   return hashedInput === hash
 }
 
+// Email notification system
+async function generateEmailTemplate(subject, message, type = 'info', actionUrl = null) {
+  const colors = {
+    info: '#2563eb',
+    success: '#059669',
+    warning: '#d97706',
+    error: '#dc2626'
+  }
+
+  const icons = {
+    info: '📋',
+    success: '✅',
+    warning: '⚠️',
+    error: '❌'
+  }
+
+  const actionButton = actionUrl ? `
+    <div style="margin: 32px 0; text-align: center;">
+      <a href="${actionUrl}" 
+         style="background-color: ${colors[type]}; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold; font-size: 16px;">
+        Open TimeOff Manager
+      </a>
+    </div>
+  ` : ''
+
+  return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>${subject}</title>
+    </head>
+    <body style="margin: 0; padding: 0; background-color: #f3f4f6; font-family: Arial, sans-serif;">
+      <div style="max-width: 600px; margin: 0 auto; background-color: white;">
+        <!-- Header -->
+        <div style="background-color: ${colors[type]}; padding: 24px; text-align: center;">
+          <h1 style="color: white; margin: 0; font-size: 24px;">
+            ${icons[type]} TimeOff Manager
+          </h1>
+        </div>
+        
+        <!-- Content -->
+        <div style="padding: 32px;">
+          <h2 style="color: #1f2937; margin-top: 0; font-size: 20px;">${subject}</h2>
+          <p style="color: #4b5563; line-height: 1.6; font-size: 16px;">${message}</p>
+          
+          ${actionButton}
+        </div>
+        
+        <!-- Footer -->
+        <div style="background-color: #f9fafb; padding: 24px; text-align: center; border-top: 1px solid #e5e7eb;">
+          <p style="color: #6b7280; font-size: 14px; margin: 0;">
+            This is an automated notification from TimeOff Manager.
+          </p>
+          <p style="color: #6b7280; font-size: 12px; margin: 8px 0 0 0;">
+            To manage your email preferences, log in to your account.
+          </p>
+        </div>
+      </div>
+    </body>
+    </html>
+  `
+}
+
+async function sendEmailNotification(env, to, subject, message, type = 'info', actionUrl = null) {
+  try {
+    // Check if email service is configured
+    if (!env.EMAIL_SERVICE) {
+      console.log('Email service not configured, skipping email notification')
+      return false
+    }
+
+    const htmlContent = await generateEmailTemplate(subject, message, type, actionUrl)
+    
+    // Using Cloudflare Email Workers
+    const emailData = {
+      from: {
+        email: env.FROM_EMAIL || 'noreply@timeoff-manager.com',
+        name: 'TimeOff Manager'
+      },
+      to: [{ email: to }],
+      subject: subject,
+      html: htmlContent
+    }
+
+    const response = await fetch(`${env.EMAIL_SERVICE}/send`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${env.EMAIL_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(emailData)
+    })
+
+    if (!response.ok) {
+      console.error('Email API error:', response.status, await response.text())
+      return false
+    }
+
+    console.log(`✅ Email sent successfully to ${to}: ${subject}`)
+    return true
+  } catch (error) {
+    console.error('❌ Failed to send email:', error)
+    return false
+  }
+}
+
+// Enhanced notification creation with email support
+async function createNotification(env, userId, type, message, emailSubject = null, actionUrl = null) {
+  try {
+    // Create in-app notification
+    const notificationId = crypto.randomUUID()
+    await env.DB.prepare(`
+      INSERT INTO notifications (id, user_id, type, message)
+      VALUES (?, ?, ?, ?)
+    `).bind(notificationId, userId, type, message).run()
+
+    // Get user email preferences
+    const user = await env.DB.prepare(
+      'SELECT email, name, email_notifications FROM users WHERE id = ?'
+    ).bind(userId).first()
+
+    // Send email if user exists and has email notifications enabled (default to true)
+    if (user && user.email && (user.email_notifications !== false)) {
+      const subject = emailSubject || getEmailSubject(type, message)
+      const enhancedMessage = `Hi ${user.name},\n\n${message}\n\nBest regards,\nTimeOff Manager Team`
+      
+      await sendEmailNotification(
+        env,
+        user.email,
+        subject,
+        enhancedMessage,
+        type,
+        actionUrl || env.APP_URL || 'https://timeoff-manager.lamado.workers.dev'
+      )
+    }
+
+    return notificationId
+  } catch (error) {
+    console.error('Error creating notification:', error)
+    throw error
+  }
+}
+
+function getEmailSubject(type, message) {
+  if (message.includes('approved')) {
+    return '✅ Your Time-Off Request Has Been Approved!'
+  } else if (message.includes('rejected')) {
+    return '❌ Your Time-Off Request Needs Attention'
+  } else if (message.includes('New') && message.includes('request')) {
+    return '📋 New Time-Off Request Requires Your Review'
+  } else if (message.includes('password')) {
+    return '🔑 Your Password Has Been Reset'
+  } else {
+    return '📬 TimeOff Manager Notification'
+  }
+}
+
 // Database initialization
 async function initDatabase(db) {
   try {
@@ -50,6 +209,8 @@ async function initDatabase(db) {
         role TEXT CHECK(role IN ('employee', 'manager', 'admin')) NOT NULL DEFAULT 'employee',
         department TEXT NOT NULL,
         avatar TEXT,
+        email_notifications BOOLEAN DEFAULT TRUE,
+        email_verified BOOLEAN DEFAULT FALSE,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
       )
@@ -96,19 +257,19 @@ async function initDatabase(db) {
       
       // For demo, we'll use simple password storage
       const users = [
-        ['1', 'Juan Carranza', 'employee@example.com', 'password', 'employee', 'Engineering', 'https://images.pexels.com/photos/2379004/pexels-photo-2379004.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1'],
-        ['2', 'Ana Ramirez', 'manager@example.com', 'password', 'manager', 'Engineering', 'https://images.pexels.com/photos/774909/pexels-photo-774909.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1'],
-        ['3', 'Alissa Pryor', 'alice@example.com', 'password', 'employee', 'Marketing', 'https://images.pexels.com/photos/415829/pexels-photo-415829.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1'],
-        ['4', 'Charly Osornio', 'bob@example.com', 'password', 'employee', 'Sales', 'https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1'],
-        ['5', 'Admin User', 'admin@example.com', 'password', 'admin', 'IT', 'https://images.pexels.com/photos/614810/pexels-photo-614810.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1'],
-        ['6', 'Sarah Johnson', 'sarah@example.com', 'password', 'employee', 'Project Management', 'https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1'],
-        ['7', 'Mike Rodriguez', 'mike@example.com', 'password', 'employee', 'Shop', 'https://images.pexels.com/photos/1681010/pexels-photo-1681010.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1']
+        ['1', 'Juan Carranza', 'employee@example.com', 'password', 'employee', 'Engineering', 'https://images.pexels.com/photos/2379004/pexels-photo-2379004.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1', true, true],
+        ['2', 'Ana Ramirez', 'manager@example.com', 'password', 'manager', 'Engineering', 'https://images.pexels.com/photos/774909/pexels-photo-774909.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1', true, true],
+        ['3', 'Alissa Pryor', 'alice@example.com', 'password', 'employee', 'Marketing', 'https://images.pexels.com/photos/415829/pexels-photo-415829.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1', true, true],
+        ['4', 'Charly Osornio', 'bob@example.com', 'password', 'employee', 'Sales', 'https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1', true, true],
+        ['5', 'Admin User', 'admin@example.com', 'password', 'admin', 'IT', 'https://images.pexels.com/photos/614810/pexels-photo-614810.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1', true, true],
+        ['6', 'Sarah Johnson', 'sarah@example.com', 'password', 'employee', 'Project Management', 'https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1', true, true],
+        ['7', 'Mike Rodriguez', 'mike@example.com', 'password', 'employee', 'Shop', 'https://images.pexels.com/photos/1681010/pexels-photo-1681010.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1', true, true]
       ]
 
       for (const user of users) {
         await db.prepare(`
-          INSERT OR REPLACE INTO users (id, name, email, password, role, department, avatar)
-          VALUES (?, ?, ?, ?, ?, ?, ?)
+          INSERT OR REPLACE INTO users (id, name, email, password, role, department, avatar, email_notifications, email_verified)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         `).bind(...user).run()
       }
 
@@ -161,11 +322,14 @@ async function initDatabase(db) {
 
       console.log('Sample data inserted successfully')
     } else {
-      // Update existing users to have simple passwords for demo
+      // Update existing users to have email preferences
       await db.prepare(`
-        UPDATE users SET password = 'password'
+        UPDATE users SET 
+          email_notifications = COALESCE(email_notifications, TRUE),
+          email_verified = COALESCE(email_verified, FALSE)
+        WHERE email_notifications IS NULL OR email_verified IS NULL
       `).run()
-      console.log('Updated existing users with demo passwords')
+      console.log('Updated existing users with email preferences')
     }
   } catch (error) {
     console.error('Database initialization error:', error)
@@ -306,6 +470,42 @@ app.patch('/api/auth/avatar', authMiddleware, async (c) => {
   }
 })
 
+// Email preferences endpoint
+app.patch('/api/auth/email-preferences', authMiddleware, async (c) => {
+  try {
+    const { emailNotifications } = await c.req.json()
+    const user = c.get('user')
+
+    await c.env.DB.prepare(
+      'UPDATE users SET email_notifications = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?'
+    ).bind(emailNotifications, user.id).run()
+
+    return c.json({ message: 'Email preferences updated successfully' })
+  } catch (error) {
+    console.error('Email preferences update error:', error)
+    return c.json({ message: 'Failed to update email preferences' }, 500)
+  }
+})
+
+// Get email preferences
+app.get('/api/auth/email-preferences', authMiddleware, async (c) => {
+  try {
+    const user = c.get('user')
+    
+    const userData = await c.env.DB.prepare(
+      'SELECT email_notifications, email_verified FROM users WHERE id = ?'
+    ).bind(user.id).first()
+
+    return c.json({
+      emailNotifications: userData?.email_notifications ?? true,
+      emailVerified: userData?.email_verified ?? false
+    })
+  } catch (error) {
+    console.error('Get email preferences error:', error)
+    return c.json({ message: 'Failed to get email preferences' }, 500)
+  }
+})
+
 // Requests routes
 app.get('/api/requests', authMiddleware, async (c) => {
   try {
@@ -423,14 +623,13 @@ app.post('/api/requests', authMiddleware, async (c) => {
     ).all()
 
     for (const manager of managersAndAdmins.results) {
-      await c.env.DB.prepare(`
-        INSERT INTO notifications (id, user_id, type, message)
-        VALUES (?, ?, 'info', ?)
-      `).bind(
-        crypto.randomUUID(),
+      await createNotification(
+        c.env,
         manager.id,
-        `New ${type} request from ${user.name} (${user.department})`
-      ).run()
+        'info',
+        `New ${type} request from ${user.name} (${user.department}) requires your review.`,
+        '📋 New Time-Off Request Requires Your Review'
+      )
     }
 
     return c.json({ message: 'Request created successfully', id: requestId }, 201)
@@ -466,20 +665,22 @@ app.patch('/api/requests/:id/status', authMiddleware, managerOrAdminMiddleware, 
       WHERE id = ?
     `).bind(status, user.id, rejectionReason || null, id).run()
 
-    // Add notification for employee
+    // Add notification for employee with email
     const notificationMessage = status === 'approved' 
-      ? `Your ${request.type} request has been approved by ${user.name}`
-      : `Your ${request.type} request has been rejected by ${user.name}`
+      ? `Your ${request.type} request has been approved by ${user.name}. You can now take your time off as requested.`
+      : `Your ${request.type} request has been rejected by ${user.name}. ${rejectionReason ? `Reason: ${rejectionReason}` : 'Please contact your manager for more details.'}`
 
-    await c.env.DB.prepare(`
-      INSERT INTO notifications (id, user_id, type, message)
-      VALUES (?, ?, ?, ?)
-    `).bind(
-      crypto.randomUUID(),
+    const emailSubject = status === 'approved'
+      ? '✅ Your Time-Off Request Has Been Approved!'
+      : '❌ Your Time-Off Request Needs Attention'
+
+    await createNotification(
+      c.env,
       request.employee_id,
       status === 'approved' ? 'success' : 'error',
-      notificationMessage
-    ).run()
+      notificationMessage,
+      emailSubject
+    )
 
     return c.json({ message: 'Request updated successfully' })
   } catch (error) {
@@ -590,8 +791,8 @@ app.post('/api/users', authMiddleware, adminMiddleware, async (c) => {
     const userId = crypto.randomUUID()
 
     await c.env.DB.prepare(`
-      INSERT INTO users (id, name, email, password, role, department, avatar)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO users (id, name, email, password, role, department, avatar, email_notifications, email_verified)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).bind(
       userId,
       name,
@@ -599,8 +800,19 @@ app.post('/api/users', authMiddleware, adminMiddleware, async (c) => {
       'password', // Default password
       role,
       department,
-      avatar || null
+      avatar || null,
+      true, // Email notifications enabled by default
+      false // Email not verified by default
     ).run()
+
+    // Send welcome notification with email
+    await createNotification(
+      c.env,
+      userId,
+      'info',
+      `Welcome to TimeOff Manager! Your account has been created. Your default password is "password" - please change it after your first login.`,
+      '🎉 Welcome to TimeOff Manager!'
+    )
 
     return c.json({ message: 'User created successfully', id: userId }, 201)
   } catch (error) {
@@ -684,15 +896,14 @@ app.patch('/api/users/:id/password', authMiddleware, adminMiddleware, async (c) 
       WHERE id = ?
     `).bind(password, id).run()
 
-    // Add notification for the user
-    await c.env.DB.prepare(`
-      INSERT INTO notifications (id, user_id, type, message)
-      VALUES (?, ?, 'warning', ?)
-    `).bind(
-      crypto.randomUUID(),
+    // Add notification for the user with email
+    await createNotification(
+      c.env,
       id,
-      'Your password has been reset by an administrator. Please log in with your new password.'
-    ).run()
+      'warning',
+      'Your password has been reset by an administrator. Please log in with your new password and consider changing it to something more secure.',
+      '🔑 Your Password Has Been Reset'
+    )
 
     return c.json({ message: 'Password reset successfully' })
   } catch (error) {
@@ -752,13 +963,45 @@ app.get('/api/users/team', authMiddleware, async (c) => {
   }
 })
 
+// Test email endpoint (for testing email functionality)
+app.post('/api/test-email', authMiddleware, adminMiddleware, async (c) => {
+  try {
+    const { to, subject, message, type = 'info' } = await c.req.json()
+    
+    if (!to || !subject || !message) {
+      return c.json({ message: 'Missing required fields: to, subject, message' }, 400)
+    }
+
+    const success = await sendEmailNotification(
+      c.env,
+      to,
+      subject,
+      message,
+      type
+    )
+
+    if (success) {
+      return c.json({ message: 'Test email sent successfully' })
+    } else {
+      return c.json({ message: 'Failed to send test email' }, 500)
+    }
+  } catch (error) {
+    console.error('Test email error:', error)
+    return c.json({ message: 'Failed to send test email' }, 500)
+  }
+})
+
 // Health check
 app.get('/health', async (c) => {
   return c.json({ 
     status: 'OK', 
     timestamp: new Date().toISOString(),
     platform: 'Cloudflare Workers',
-    database: 'Cloudflare D1'
+    database: 'Cloudflare D1',
+    features: {
+      email_notifications: !!c.env.EMAIL_SERVICE,
+      database: !!c.env.DB
+    }
   })
 })
 

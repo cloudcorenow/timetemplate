@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Menu, Bell, LogOut, Upload } from 'lucide-react';
+import { Menu, Bell, LogOut, Upload, Settings, Mail } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { useNotificationStore } from '../../store/notificationStore';
 import NotificationDropdown from '../notifications/NotificationDropdown';
+import EmailPreferences from '../settings/EmailPreferences';
 
 interface HeaderProps {
   openSidebar: () => void;
@@ -15,6 +16,7 @@ const Header: React.FC<HeaderProps> = ({ openSidebar }) => {
   const [showDropdown, setShowDropdown] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showAvatarModal, setShowAvatarModal] = useState(false);
+  const [showEmailSettings, setShowEmailSettings] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState(user?.avatar || '');
   const { unreadCount, fetchUnreadCount } = useNotificationStore();
 
@@ -104,6 +106,16 @@ const Header: React.FC<HeaderProps> = ({ openSidebar }) => {
                   Change Avatar
                 </button>
                 <button
+                  onClick={() => {
+                    setShowEmailSettings(true);
+                    setShowDropdown(false);
+                  }}
+                  className="flex w-full items-center px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100"
+                >
+                  <Mail size={16} className="mr-2" />
+                  Email Settings
+                </button>
+                <button
                   onClick={handleLogout}
                   className="flex w-full items-center px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100"
                 >
@@ -150,6 +162,14 @@ const Header: React.FC<HeaderProps> = ({ openSidebar }) => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Email Settings Modal */}
+      {showEmailSettings && (
+        <EmailPreferences 
+          isOpen={showEmailSettings}
+          onClose={() => setShowEmailSettings(false)}
+        />
       )}
     </header>
   );

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { User } from '../types/user';
-import { UserPlus, Pencil, Trash2, Check, X, Key } from 'lucide-react';
+import { UserPlus, Pencil, Trash2, Check, X, Key, Mail } from 'lucide-react';
 import { apiService } from '../services/api';
 
 const departments = ['Engineering', 'Marketing', 'Sales', 'HR', 'Finance', 'Project Management', 'Shop', 'IT'];
@@ -14,7 +14,13 @@ const EmployeeManagementPage: React.FC = () => {
   const [isAddingEmployee, setIsAddingEmployee] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState<User | null>(null);
   const [resettingPasswordFor, setResettingPasswordFor] = useState<User | null>(null);
+  const [sendingTestEmailTo, setSendingTestEmailTo] = useState<User | null>(null);
   const [newPassword, setNewPassword] = useState('');
+  const [testEmailData, setTestEmailData] = useState({
+    subject: '',
+    message: '',
+    type: 'info'
+  });
   const [newEmployee, setNewEmployee] = useState({
     name: '',
     email: '',
@@ -104,6 +110,47 @@ const EmployeeManagementPage: React.FC = () => {
     }
   };
 
+  const handleResetPassword = async () => {
+    if (!resettingPasswordFor || !newPassword.trim()) return;
+
+    try {
+      await apiService.resetUserPassword(resettingPasswordFor.id, newPassword);
+      
+      setResettingPasswordFor(null);
+      setNewPassword('');
+      setError(null);
+      
+      // Show success message
+      alert(`Password reset successfully for ${resettingPasswordFor.name}. They will be notified of the change via email.`);
+    } catch (error: any) {
+      console.error('Error resetting password:', error);
+      setError(error.message || 'Failed to reset password');
+    }
+  };
+
+  const handleSendTestEmail = async () => {
+    if (!sendingTestEmailTo || !testEmailData.subject.trim() || !testEmailData.message.trim()) return;
+
+    try {
+      await apiService.sendTestEmail(
+        sendingTestEmailTo.email,
+        testEmailData.subject,
+        testEmailData.message,
+        testEmailData.type
+      );
+      
+      setSendingTestEmailTo(null);
+      setTestEmailData({ subject: '', message: '', type: 'info' });
+      setError(null);
+      
+      // Show success message
+      alert(`Test email sent successfully to ${sendingTestEmailTo.name} (${sendingTestEmailTo.email})`);
+    } catch (error: any) {
+      console.error('Error sending test email:', error);
+      setError(error.message || 'Failed to send test email');
+    }
+  };
+
   const handleDeleteEmployee = async (id: string) => {
     if (!confirm('Are you sure you want to delete this employee? This action cannot be undone.')) {
       return;
@@ -121,29 +168,13 @@ const EmployeeManagementPage: React.FC = () => {
     }
   };
 
-  const handleResetPassword = async () => {
-    if (!resettingPasswordFor || !newPassword.trim()) return;
-
-    try {
-      await apiService.resetUserPassword(resettingPasswordFor.id, newPassword);
-      
-      setResettingPasswordFor(null);
-      setNewPassword('');
-      setError(null);
-      
-      // Show success message
-      alert(`Password reset successfully for ${resettingPasswordFor.name}. They will be notified of the change.`);
-    } catch (error: any) {
-      console.error('Error resetting password:', error);
-      setError(error.message || 'Failed to reset password');
-    }
-  };
-
   const cancelEdit = () => {
     setEditingEmployee(null);
     setIsAddingEmployee(false);
     setResettingPasswordFor(null);
+    setSendingTestEmailTo(null);
     setNewPassword('');
+    setTestEmailData({ subject: '', message: '', type: 'info' });
     setNewEmployee({
       name: '',
       email: '',
@@ -195,7 +226,7 @@ const EmployeeManagementPage: React.FC = () => {
           <button
             onClick={() => setIsAddingEmployee(true)}
             className="flex items-center rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
-            disabled={editingEmployee !== null || resettingPasswordFor !== null}
+            disabled={editingEmployee !== null || resettingPasswordFor !== null || sendingTestEmailTo !== null}
           >
             <UserPlus size={16} className="mr-2" />
             Add Employee
@@ -295,7 +326,7 @@ const EmployeeManagementPage: React.FC = () => {
                 className="mt-1 block w-full rounded-md border border-amber-300 px-3 py-2 shadow-sm focus:border-amber-500 focus:outline-none focus:ring-amber-500"
               />
               <p className="mt-1 text-xs text-amber-600">
-                The user will be notified about this password change and must use the new password to log in.
+                The user will be notified about this password change via email and must use the new password to log in.
               </p>
             </div>
             <div className="flex justify-end space-x-2">
@@ -313,6 +344,69 @@ const EmployeeManagementPage: React.FC = () => {
               >
                 <Key size={16} className="mr-2" />
                 Reset Password
+              </button>
+            </div>
+          </div>
+        )}
+
+        {sendingTestEmailTo && (
+          <div className="mb-6 rounded-lg border border-blue-200 bg-blue-50 p-4">
+            <h3 className="mb-4 text-lg font-medium text-blue-800">
+              Send Test Email to {sendingTestEmailTo.name}
+            </h3>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-blue-700">Email Type</label>
+                <select
+                  value={testEmailData.type}
+                  onChange={(e) => setTestEmailData({ ...testEmailData, type: e.target.value })}
+                  className="mt-1 block w-full rounded-md border border-blue-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500"
+                >
+                  <option value="info">Info</option>
+                  <option value="success">Success</option>
+                  <option value="warning">Warning</option>
+                  <option value="error">Error</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-blue-700">Subject</label>
+                <input
+                  type="text"
+                  value={testEmailData.subject}
+                  onChange={(e) => setTestEmailData({ ...testEmailData, subject: e.target.value })}
+                  placeholder="Test email subject"
+                  className="mt-1 block w-full rounded-md border border-blue-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-blue-700">Message</label>
+                <textarea
+                  value={testEmailData.message}
+                  onChange={(e) => setTestEmailData({ ...testEmailData, message: e.target.value })}
+                  placeholder="Test email message content"
+                  rows={3}
+                  className="mt-1 block w-full rounded-md border border-blue-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500"
+                />
+              </div>
+              <p className="text-xs text-blue-600">
+                This will send a test email to {sendingTestEmailTo.email} to verify email functionality.
+              </p>
+            </div>
+            <div className="mt-4 flex justify-end space-x-2">
+              <button
+                onClick={cancelEdit}
+                className="flex items-center rounded-md border border-blue-300 px-4 py-2 text-sm font-medium text-blue-700 hover:bg-blue-100"
+              >
+                <X size={16} className="mr-2" />
+                Cancel
+              </button>
+              <button
+                onClick={handleSendTestEmail}
+                disabled={!testEmailData.subject.trim() || !testEmailData.message.trim()}
+                className="flex items-center rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-300"
+              >
+                <Mail size={16} className="mr-2" />
+                Send Test Email
               </button>
             </div>
           </div>
@@ -379,7 +473,7 @@ const EmployeeManagementPage: React.FC = () => {
                           onClick={() => handleEditEmployee(employee)}
                           className="text-blue-600 hover:text-blue-900"
                           title="Edit employee"
-                          disabled={isAddingEmployee || editingEmployee !== null || resettingPasswordFor !== null}
+                          disabled={isAddingEmployee || editingEmployee !== null || resettingPasswordFor !== null || sendingTestEmailTo !== null}
                         >
                           <Pencil size={16} />
                         </button>
@@ -387,15 +481,23 @@ const EmployeeManagementPage: React.FC = () => {
                           onClick={() => setResettingPasswordFor(employee)}
                           className="text-amber-600 hover:text-amber-900"
                           title="Reset password"
-                          disabled={isAddingEmployee || editingEmployee !== null || resettingPasswordFor !== null}
+                          disabled={isAddingEmployee || editingEmployee !== null || resettingPasswordFor !== null || sendingTestEmailTo !== null}
                         >
                           <Key size={16} />
+                        </button>
+                        <button
+                          onClick={() => setSendingTestEmailTo(employee)}
+                          className="text-green-600 hover:text-green-900"
+                          title="Send test email"
+                          disabled={isAddingEmployee || editingEmployee !== null || resettingPasswordFor !== null || sendingTestEmailTo !== null}
+                        >
+                          <Mail size={16} />
                         </button>
                         <button
                           onClick={() => handleDeleteEmployee(employee.id)}
                           className="text-red-600 hover:text-red-900"
                           title="Delete employee"
-                          disabled={isAddingEmployee || editingEmployee !== null || resettingPasswordFor !== null}
+                          disabled={isAddingEmployee || editingEmployee !== null || resettingPasswordFor !== null || sendingTestEmailTo !== null}
                         >
                           <Trash2 size={16} />
                         </button>

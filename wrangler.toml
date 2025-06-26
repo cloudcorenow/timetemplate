@@ -10,6 +10,12 @@ database_id = "95ef3d44-4b8f-4802-97bd-8e50861e5f49"
 
 [vars]
 NODE_ENV = "production"
+APP_URL = "https://timeoff-manager.lamado.workers.dev"
+FROM_EMAIL = "noreply@timeoff-manager.com"
+
+# Email service configuration (set these as secrets)
+# EMAIL_SERVICE = "https://api.resend.com"  # or your email service URL
+# EMAIL_API_KEY = "your-email-api-key"      # set as secret
 
 [env.production]
 name = "timeoff-manager-prod"

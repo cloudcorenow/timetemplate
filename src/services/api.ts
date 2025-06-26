@@ -59,6 +59,18 @@ class ApiService {
     });
   }
 
+  // Email preferences methods
+  async getEmailPreferences() {
+    return this.request('/auth/email-preferences');
+  }
+
+  async updateEmailPreferences(emailNotifications: boolean) {
+    return this.request('/auth/email-preferences', {
+      method: 'PATCH',
+      body: JSON.stringify({ emailNotifications }),
+    });
+  }
+
   // Request methods
   async getRequests() {
     return this.request('/requests');
@@ -118,12 +130,6 @@ class ApiService {
     });
   }
 
-  async deleteUser(id: string) {
-    return this.request(`/users/${id}`, {
-      method: 'DELETE',
-    });
-  }
-
   async resetUserPassword(id: string, newPassword: string) {
     return this.request(`/users/${id}/password`, {
       method: 'PATCH',
@@ -131,8 +137,22 @@ class ApiService {
     });
   }
 
+  async deleteUser(id: string) {
+    return this.request(`/users/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
   async getTeamMembers() {
     return this.request('/users/team');
+  }
+
+  // Test email method (admin only)
+  async sendTestEmail(to: string, subject: string, message: string, type: string = 'info') {
+    return this.request('/test-email', {
+      method: 'POST',
+      body: JSON.stringify({ to, subject, message, type }),
+    });
   }
 
   // Utility methods
