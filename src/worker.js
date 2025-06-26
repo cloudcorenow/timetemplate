@@ -372,16 +372,16 @@ async function createNotification(env, userId, type, message, emailSubject = nul
 
     console.log('✅ In-app notification created:', notificationResult)
 
-    // Get user email preferences and info
+    // Get user email preferences and info - FIXED QUERY
     const user = await env.DB.prepare(
-      'SELECT email, name, email_notifications FROM users WHERE id = ?'
+      'SELECT email, name, COALESCE(email_notifications, 1) as email_notifications FROM users WHERE id = ?'
     ).bind(userId).first()
 
     console.log('👤 User found:', user ? `${user.name} (${user.email})` : 'Not found')
-    console.log('📧 Email notifications enabled:', user?.email_notifications !== false)
+    console.log('📧 Email notifications enabled:', user?.email_notifications !== 0)
 
     // Send email if user exists and has email notifications enabled (default to true)
-    if (user && user.email && (user.email_notifications !== false)) {
+    if (user && user.email && (user.email_notifications !== 0)) {
       console.log('📧 Attempting to send email notification...')
       
       const subject = emailSubject || getEmailSubject(type, message)
@@ -437,10 +437,12 @@ function getEmailSubject(type, message) {
   }
 }
 
-// Database initialization
+// FIXED Database initialization with proper schema migration
 async function initDatabase(db) {
   try {
-    // Create users table
+    console.log('🔧 === DATABASE INITIALIZATION ===')
+    
+    // Create users table with all required columns
     await db.exec(`
       CREATE TABLE IF NOT EXISTS users (
         id TEXT PRIMARY KEY,
@@ -456,6 +458,30 @@ async function initDatabase(db) {
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
       )
     `)
+
+    // Check if email_notifications column exists, add if missing
+    try {
+      const testQuery = await db.prepare('SELECT email_notifications FROM users LIMIT 1').first()
+      console.log('✅ email_notifications column exists')
+    } catch (error) {
+      if (error.message.includes('no such column: email_notifications')) {
+        console.log('🔧 Adding missing email_notifications column...')
+        await db.exec('ALTER TABLE users ADD COLUMN email_notifications BOOLEAN DEFAULT TRUE')
+        console.log('✅ email_notifications column added')
+      }
+    }
+
+    // Check if email_verified column exists, add if missing
+    try {
+      const testQuery = await db.prepare('SELECT email_verified FROM users LIMIT 1').first()
+      console.log('✅ email_verified column exists')
+    } catch (error) {
+      if (error.message.includes('no such column: email_verified')) {
+        console.log('🔧 Adding missing email_verified column...')
+        await db.exec('ALTER TABLE users ADD COLUMN email_verified BOOLEAN DEFAULT FALSE')
+        console.log('✅ email_verified column added')
+      }
+    }
 
     // Create time_off_requests table
     await db.exec(`
@@ -494,17 +520,17 @@ async function initDatabase(db) {
     const existingUsers = await db.prepare('SELECT COUNT(*) as count FROM users').first()
     
     if (existingUsers.count === 0) {
-      console.log('Inserting sample users...')
+      console.log('📝 Inserting sample users...')
       
       // For demo, we'll use simple password storage
       const users = [
-        ['1', 'Juan Carranza', 'employee@example.com', 'password', 'employee', 'Engineering', 'https://images.pexels.com/photos/2379004/pexels-photo-2379004.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1', true, true],
-        ['2', 'Ana Ramirez', 'manager@example.com', 'password', 'manager', 'Engineering', 'https://images.pexels.com/photos/774909/pexels-photo-774909.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1', true, true],
-        ['3', 'Alissa Pryor', 'alice@example.com', 'password', 'employee', 'Marketing', 'https://images.pexels.com/photos/415829/pexels-photo-415829.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1', true, true],
-        ['4', 'Charly Osornio', 'bob@example.com', 'password', 'employee', 'Sales', 'https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1', true, true],
-        ['5', 'Admin User', 'admin@example.com', 'password', 'admin', 'IT', 'https://images.pexels.com/photos/614810/pexels-photo-614810.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1', true, true],
-        ['6', 'Sarah Johnson', 'sarah@example.com', 'password', 'employee', 'Project Management', 'https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1', true, true],
-        ['7', 'Mike Rodriguez', 'mike@example.com', 'password', 'employee', 'Shop', 'https://images.pexels.com/photos/1681010/pexels-photo-1681010.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1', true, true]
+        ['1', 'Juan Carranza', 'employee@example.com', 'password', 'employee', 'Engineering', 'https://images.pexels.com/photos/2379004/pexels-photo-2379004.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1', 1, 1],
+        ['2', 'Ana Ramirez', 'manager@example.com', 'password', 'manager', 'Engineering', 'https://images.pexels.com/photos/774909/pexels-photo-774909.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1', 1, 1],
+        ['3', 'Alissa Pryor', 'alice@example.com', 'password', 'employee', 'Marketing', 'https://images.pexels.com/photos/415829/pexels-photo-415829.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1', 1, 1],
+        ['4', 'Charly Osornio', 'bob@example.com', 'password', 'employee', 'Sales', 'https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1', 1, 1],
+        ['5', 'Admin User', 'admin@example.com', 'password', 'admin', 'IT', 'https://images.pexels.com/photos/614810/pexels-photo-614810.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1', 1, 1],
+        ['6', 'Sarah Johnson', 'sarah@example.com', 'password', 'employee', 'Project Management', 'https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1', 1, 1],
+        ['7', 'Mike Rodriguez', 'mike@example.com', 'password', 'employee', 'Shop', 'https://images.pexels.com/photos/1681010/pexels-photo-1681010.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1', 1, 1]
       ]
 
       for (const user of users) {
@@ -561,19 +587,24 @@ async function initDatabase(db) {
         `).bind(...notification).run()
       }
 
-      console.log('Sample data inserted successfully')
+      console.log('✅ Sample data inserted successfully')
     } else {
-      // Update existing users to have email preferences
+      // Update existing users to have email preferences if they don't exist
+      console.log('🔧 Updating existing users with email preferences...')
+      
+      // Use COALESCE to set default values for NULL columns
       await db.prepare(`
         UPDATE users SET 
-          email_notifications = COALESCE(email_notifications, TRUE),
-          email_verified = COALESCE(email_verified, FALSE)
-        WHERE email_notifications IS NULL OR email_verified IS NULL
+          email_notifications = COALESCE(email_notifications, 1),
+          email_verified = COALESCE(email_verified, 0)
       `).run()
-      console.log('Updated existing users with email preferences')
+      
+      console.log('✅ Updated existing users with email preferences')
     }
+    
+    console.log('✅ Database initialization completed successfully')
   } catch (error) {
-    console.error('Database initialization error:', error)
+    console.error('❌ Database initialization error:', error)
   }
 }
 
@@ -767,12 +798,12 @@ app.get('/api/auth/email-preferences', authMiddleware, async (c) => {
     const user = c.get('user')
     
     const userData = await c.env.DB.prepare(
-      'SELECT email_notifications, email_verified FROM users WHERE id = ?'
+      'SELECT COALESCE(email_notifications, 1) as email_notifications, COALESCE(email_verified, 0) as email_verified FROM users WHERE id = ?'
     ).bind(user.id).first()
 
     return c.json({
-      emailNotifications: userData?.email_notifications ?? true,
-      emailVerified: userData?.email_verified ?? false
+      emailNotifications: userData?.email_notifications === 1,
+      emailVerified: userData?.email_verified === 1
     })
   } catch (error) {
     console.error('Get email preferences error:', error)
@@ -1075,8 +1106,8 @@ app.post('/api/users', authMiddleware, adminMiddleware, async (c) => {
       role,
       department,
       avatar || null,
-      true, // Email notifications enabled by default
-      false // Email not verified by default
+      1, // Email notifications enabled by default
+      0 // Email not verified by default
     ).run()
 
     // Send welcome notification with email
