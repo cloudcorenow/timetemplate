@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { User } from '../types/user';
 import { UserPlus, Pencil, Trash2, Check, X, Key, Mail } from 'lucide-react';
 import { apiService } from '../services/api';
+import ImageUpload from '../components/ui/ImageUpload';
 
 const departments = ['Engineering', 'Marketing', 'Sales', 'HR', 'Finance', 'Project Management', 'Shop', 'IT'];
 
@@ -238,7 +239,23 @@ const EmployeeManagementPage: React.FC = () => {
             <h3 className="mb-4 text-lg font-medium text-gray-700">
               {editingEmployee ? 'Edit Employee' : 'New Employee'}
             </h3>
-            <div className="grid gap-4 sm:grid-cols-2">
+            
+            <div className="grid gap-6 lg:grid-cols-2">
+              {/* Profile Picture Upload */}
+              <div className="lg:col-span-2 flex justify-center">
+                <div className="text-center">
+                  <label className="block text-sm font-medium text-gray-700 mb-3">
+                    Profile Picture
+                  </label>
+                  <ImageUpload
+                    currentImage={newEmployee.avatar}
+                    onImageChange={(imageData) => setNewEmployee({ ...newEmployee, avatar: imageData || '' })}
+                    size="lg"
+                  />
+                </div>
+              </div>
+              
+              {/* Form Fields */}
               <div>
                 <label className="block text-sm font-medium text-gray-700">Name</label>
                 <input
@@ -280,18 +297,9 @@ const EmployeeManagementPage: React.FC = () => {
                   <option value="manager">Manager</option>
                 </select>
               </div>
-              <div className="sm:col-span-2">
-                <label className="block text-sm font-medium text-gray-700">Avatar URL (optional)</label>
-                <input
-                  type="url"
-                  value={newEmployee.avatar}
-                  onChange={(e) => setNewEmployee({ ...newEmployee, avatar: e.target.value })}
-                  placeholder="https://example.com/avatar.jpg"
-                  className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500"
-                />
-              </div>
             </div>
-            <div className="mt-4 flex justify-end space-x-2">
+            
+            <div className="mt-6 flex justify-end space-x-2">
               <button
                 onClick={cancelEdit}
                 className="flex items-center rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
