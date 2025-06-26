@@ -154,7 +154,9 @@ const EnhancedRequestCard: React.FC<EnhancedRequestCardProps> = ({ request, isMa
             {getStatusBadge()}
             <RequestActionsMenu 
               requestId={request.id} 
-              employeeName={request.employee.name} 
+              employeeName={request.employee.name}
+              status={request.status}
+              employeeId={request.employee.id}
             />
           </div>
         </div>

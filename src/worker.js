@@ -1099,9 +1099,9 @@ app.delete('/api/requests/:id', authMiddleware, async (c) => {
     // Check if user has permission to delete this request
     // Admins can delete any request
     // Managers can delete any request
-    // Employees can only delete their own requests
-    if (user.role === 'employee' && request.employee_id !== user.id) {
-      return c.json({ message: 'You do not have permission to delete this request' }, 403)
+    // Employees can only delete their own requests when they're in pending status
+    if (user.role === 'employee' && (request.employee_id !== user.id || request.status !== 'pending')) {
+      return c.json({ message: 'You can only delete your own pending requests' }, 403)
     }
     
     // Delete the request

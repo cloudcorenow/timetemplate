@@ -4,19 +4,28 @@ import { useNavigate } from 'react-router-dom';
 import { useToast } from '../../hooks/useToast';
 import { apiService } from '../../services/api';
 import { useRequestStore } from '../../store/requestStore';
+import { useAuth } from '../../context/AuthContext';
 
 interface RequestActionsMenuProps {
   requestId: string;
   employeeName: string;
+  status?: string;
+  employeeId?: string;
 }
 
-const RequestActionsMenu: React.FC<RequestActionsMenuProps> = ({ requestId, employeeName }) => {
+const RequestActionsMenu: React.FC<RequestActionsMenuProps> = ({ 
+  requestId, 
+  employeeName, 
+  status = 'pending',
+  employeeId
+}) => {
   const [isOpen, setIsOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
   const { addToast } = useToast();
   const { forceRefresh } = useRequestStore();
+  const { user } = useAuth();
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -88,6 +97,21 @@ const RequestActionsMenu: React.FC<RequestActionsMenuProps> = ({ requestId, empl
     setIsOpen(false);
   };
 
+  // Check if the current user can delete this request
+  const canDelete = () => {
+    if (!user) return false;
+    
+    // Admins and managers can delete any request
+    if (user.role === 'admin' || user.role === 'manager') return true;
+    
+    // Employees can only delete their own requests when they're in pending status
+    if (user.role === 'employee') {
+      return employeeId === user.id && status === 'pending';
+    }
+    
+    return false;
+  };
+
   return (
     <div className="relative" ref={menuRef}>
       <button
@@ -124,16 +148,20 @@ const RequestActionsMenu: React.FC<RequestActionsMenuProps> = ({ requestId, empl
             Archive
           </button>
           
-          <div className="border-t border-gray-100 my-1"></div>
-          
-          <button
-            onClick={handleDelete}
-            disabled={isDeleting}
-            className="flex w-full items-center px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <Trash2 size={16} className="mr-3" />
-            {isDeleting ? 'Deleting...' : 'Delete'}
-          </button>
+          {canDelete() && (
+            <>
+              <div className="border-t border-gray-100 my-1"></div>
+              
+              <button
+                onClick={handleDelete}
+                disabled={isDeleting}
+                className="flex w-full items-center px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Trash2 size={16} className="mr-3" />
+                {isDeleting ? 'Deleting...' : 'Delete'}
+              </button>
+            </>
+          )}
         </div>
       )}
     </div>

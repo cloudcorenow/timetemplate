@@ -127,7 +127,9 @@ const MobileRequestCard: React.FC<MobileRequestCardProps> = ({ request, isManage
           {getStatusBadge()}
           <RequestActionsMenu 
             requestId={request.id} 
-            employeeName={request.employee.name} 
+            employeeName={request.employee.name}
+            status={request.status}
+            employeeId={request.employee.id}
           />
           {isExpanded ? 
             <ChevronUp size={16} className="text-gray-400 dark:text-gray-500" /> : 
