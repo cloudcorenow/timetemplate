@@ -287,6 +287,12 @@ async function sendEmailNotification(env, to, subject, message, type = 'info', a
 // Enhanced notification creation with email support
 async function createNotification(env, userId, type, message, emailSubject = null, actionUrl = null) {
   try {
+    console.log('=== CREATING NOTIFICATION ===')
+    console.log('User ID:', userId)
+    console.log('Type:', type)
+    console.log('Message:', message)
+    console.log('Email Subject:', emailSubject)
+
     // Create in-app notification
     const notificationId = crypto.randomUUID()
     await env.DB.prepare(`
@@ -294,17 +300,29 @@ async function createNotification(env, userId, type, message, emailSubject = nul
       VALUES (?, ?, ?, ?)
     `).bind(notificationId, userId, type, message).run()
 
+    console.log('✅ In-app notification created:', notificationId)
+
     // Get user email preferences
     const user = await env.DB.prepare(
       'SELECT email, name, COALESCE(email_notifications, 1) as email_notifications FROM users WHERE id = ?'
     ).bind(userId).first()
+
+    console.log('User found:', user ? 'Yes' : 'No')
+    if (user) {
+      console.log('User email:', user.email)
+      console.log('Email notifications enabled:', user.email_notifications)
+    }
 
     // Send email if user exists and has email notifications enabled (default to true)
     if (user && user.email && user.email_notifications) {
       const subject = emailSubject || getEmailSubject(type, message)
       const enhancedMessage = `Hi ${user.name},\n\n${message}\n\nBest regards,\nTimeOff Manager Team`
       
-      await sendEmailNotification(
+      console.log('📧 Attempting to send email...')
+      console.log('To:', user.email)
+      console.log('Subject:', subject)
+      
+      const emailSent = await sendEmailNotification(
         env,
         user.email,
         subject,
@@ -312,11 +330,15 @@ async function createNotification(env, userId, type, message, emailSubject = nul
         type,
         actionUrl || env.APP_URL || 'https://timeoff-manager.lamado.workers.dev'
       )
+      
+      console.log('Email sent successfully:', emailSent)
+    } else {
+      console.log('📧 Email not sent - user not found, no email, or notifications disabled')
     }
 
     return notificationId
   } catch (error) {
-    console.error('Error creating notification:', error)
+    console.error('❌ Error creating notification:', error)
     throw error
   }
 }
@@ -330,6 +352,8 @@ function getEmailSubject(type, message) {
     return '📋 New Time-Off Request Requires Your Review'
   } else if (message.includes('password')) {
     return '🔑 Your Password Has Been Reset'
+  } else if (message.includes('Welcome')) {
+    return '🎉 Welcome to TimeOff Manager!'
   } else {
     return '📬 TimeOff Manager Notification'
   }
@@ -429,13 +453,13 @@ async function initDatabase(db) {
       ]
 
       for (const user of users) {
-        await db.prepare(`
-          INSERT OR REPLACE INTO users (id, name, email, password, role, department, avatar, email_notifications, email_verified)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-        `).bind(...user).run()
+        await db.prepare(
+          'INSERT INTO users (id, name, email, password, role, department, avatar, email_notifications, email_verified) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+          user
+        ).run()
       }
 
-      // Insert sample requests
+      // Insert sample time off requests
       const requests = [
         ['req1', '1', '2025-02-15', '2025-02-17', 'paid time off', 'Family vacation to the mountains', 'approved', '2'],
         ['req2', '3', '2025-02-20', '2025-02-21', 'sick leave', 'Flu symptoms, need to recover', 'pending', null],
@@ -445,25 +469,23 @@ async function initDatabase(db) {
       ]
 
       for (const request of requests) {
-        await db.prepare(`
-          INSERT OR REPLACE INTO time_off_requests (id, employee_id, start_date, end_date, type, reason, status, approved_by)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        `).bind(...request).run()
+        await db.prepare(
+          'INSERT INTO time_off_requests (id, employee_id, start_date, end_date, type, reason, status, approved_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+          request
+        ).run()
       }
 
       // Update time edit request with time details
-      await db.prepare(`
-        UPDATE time_off_requests 
-        SET original_clock_in = ?, original_clock_out = ?, requested_clock_in = ?, requested_clock_out = ?
-        WHERE id = ?
-      `).bind('08:00:00', '17:00:00', '08:00:00', '18:00:00', 'req4').run()
+      await db.prepare(
+        'UPDATE time_off_requests SET original_clock_in = ?, original_clock_out = ?, requested_clock_in = ?, requested_clock_out = ? WHERE id = ?',
+        ['08:00:00', '17:00:00', '08:00:00', '18:00:00', 'req4']
+      ).run()
 
       // Update rejected request with rejection reason
-      await db.prepare(`
-        UPDATE time_off_requests 
-        SET rejection_reason = ?
-        WHERE id = ?
-      `).bind('Insufficient notice period. Please submit requests at least 2 weeks in advance.', 'req5').run()
+      await db.prepare(
+        'UPDATE time_off_requests SET rejection_reason = ? WHERE id = ?',
+        ['Insufficient notice period. Please submit requests at least 2 weeks in advance.', 'req5']
+      ).run()
 
       // Insert sample notifications
       const notifications = [
@@ -476,10 +498,10 @@ async function initDatabase(db) {
       ]
 
       for (const notification of notifications) {
-        await db.prepare(`
-          INSERT OR REPLACE INTO notifications (id, user_id, type, message, is_read)
-          VALUES (?, ?, ?, ?, ?)
-        `).bind(...notification).run()
+        await db.prepare(
+          'INSERT INTO notifications (id, user_id, type, message, is_read) VALUES (?, ?, ?, ?, ?)',
+          notification
+        ).run()
       }
 
       console.log('✅ Sample data inserted successfully')
@@ -987,6 +1009,13 @@ app.post('/api/users', authMiddleware, adminMiddleware, async (c) => {
 
     const userId = crypto.randomUUID()
 
+    console.log('=== CREATING NEW USER ===')
+    console.log('User ID:', userId)
+    console.log('Name:', name)
+    console.log('Email:', email)
+    console.log('Role:', role)
+    console.log('Department:', department)
+
     await c.env.DB.prepare(`
       INSERT INTO users (id, name, email, password, role, department, avatar, email_notifications, email_verified)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -1002,18 +1031,21 @@ app.post('/api/users', authMiddleware, adminMiddleware, async (c) => {
       false // Email not verified by default
     ).run()
 
+    console.log('✅ User created in database')
+
     // Send welcome notification with email
+    console.log('📧 Creating welcome notification...')
     await createNotification(
       c.env,
       userId,
       'info',
-      `Welcome to TimeOff Manager! Your account has been created. Your default password is "password" - please change it after your first login.`,
+      `Welcome to TimeOff Manager! Your account has been created successfully. Your default password is "password" - please change it after your first login for security.`,
       '🎉 Welcome to TimeOff Manager!'
     )
 
     return c.json({ message: 'User created successfully', id: userId }, 201)
   } catch (error) {
-    console.error('Create user error:', error)
+    console.error('❌ Create user error:', error)
     return c.json({ message: 'Failed to create user' }, 500)
   }
 })
@@ -1173,6 +1205,12 @@ app.post('/api/test-email', authMiddleware, adminMiddleware, async (c) => {
     if (!to || !subject || !message) {
       return c.json({ message: 'Missing required fields: to, subject, message' }, 400)
     }
+
+    console.log('=== SENDING TEST EMAIL ===')
+    console.log('To:', to)
+    console.log('Subject:', subject)
+    console.log('Message:', message)
+    console.log('Type:', type)
 
     const success = await sendEmailNotification(
       c.env,
