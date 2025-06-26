@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { format } from 'date-fns';
-import { Calendar, Clock, CheckCircle2, XCircle, Building2, ChevronDown, ChevronUp } from 'lucide-react';
+import { Calendar, Clock, CheckCircle2, XCircle, Building2, ChevronDown, ChevronUp, User } from 'lucide-react';
 import { TimeOffRequest } from '../../types/request';
 import { useAuth } from '../../context/AuthContext';
 import { useRequestStore } from '../../store/requestStore';
@@ -114,9 +114,11 @@ const MobileRequestCard: React.FC<MobileRequestCardProps> = ({ request, isManage
           </div>
           <div className="ml-3 flex-1 min-w-0">
             <p className="font-medium text-gray-900 truncate">{request.employee.name}</p>
-            <p className="text-sm text-gray-500 truncate">
-              {request.type} • {format(new Date(request.startDate), 'MMM d')}
-            </p>
+            <div className="flex items-center">
+              <span className="text-xs text-gray-500 truncate">
+                {request.type} • {format(new Date(request.startDate), 'MMM d')}
+              </span>
+            </div>
           </div>
         </div>
         
@@ -133,6 +135,12 @@ const MobileRequestCard: React.FC<MobileRequestCardProps> = ({ request, isManage
           <div className="flex items-center text-sm text-gray-600">
             <Building2 size={14} className="mr-2" />
             {request.employee.department}
+            {request.employee.role === 'manager' && (
+              <Badge variant="info" size="sm" className="ml-2">
+                <User size={10} className="mr-1" />
+                Manager
+              </Badge>
+            )}
           </div>
 
           {/* Date/Time Information */}
@@ -140,7 +148,7 @@ const MobileRequestCard: React.FC<MobileRequestCardProps> = ({ request, isManage
             <div className="space-y-3">
               <div className="flex items-center text-sm font-medium text-gray-700">
                 <Calendar size={14} className="mr-2 text-blue-500" />
-                <span>{format(new Date(request.startDate), 'MMM d, yyyy')}</span>
+                <span>{format(new Date(request.startDate), 'EEEE, MMMM d, yyyy')}</span>
               </div>
               
               <div className="rounded-lg bg-gray-50 p-3 space-y-2">
@@ -162,7 +170,7 @@ const MobileRequestCard: React.FC<MobileRequestCardProps> = ({ request, isManage
             <div className="flex items-center text-sm font-medium text-gray-700">
               <Calendar size={14} className="mr-2 text-blue-500" />
               <span>
-                {format(new Date(request.startDate), 'MMM d')} - {format(new Date(request.endDate), 'MMM d, yyyy')}
+                {format(new Date(request.startDate), 'EEEE, MMMM d')} - {format(new Date(request.endDate), 'EEEE, MMMM d, yyyy')}
               </span>
             </div>
           )}
@@ -263,7 +271,7 @@ const MobileRequestCard: React.FC<MobileRequestCardProps> = ({ request, isManage
           {/* Created date */}
           <div className="flex items-center text-xs text-gray-500 pt-2 border-t border-gray-100">
             <Clock size={12} className="mr-1" />
-            Created {format(new Date(request.createdAt), 'MMM d, yyyy')}
+            Created {format(new Date(request.createdAt), 'MMMM d, yyyy')}
           </div>
         </div>
       )}

@@ -4,12 +4,17 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 // Pages
 import LoginPage from './pages/LoginPage';
 import EnhancedDashboardPage from './pages/EnhancedDashboardPage';
-import MobileDashboard from './components/mobile/MobileDashboard';
 import CalendarPage from './pages/CalendarPage';
 import RequestFormPage from './pages/RequestFormPage';
-import MobileRequestFormPage from './pages/MobileRequestFormPage';
 import TeamOverviewPage from './pages/TeamOverviewPage';
 import EmployeeManagementPage from './pages/EmployeeManagementPage';
+
+// Mobile Pages
+import MobileDashboard from './components/mobile/MobileDashboard';
+import MobileRequestFormPage from './components/mobile/MobileRequestFormPage';
+import MobileCalendar from './components/mobile/MobileCalendar';
+import MobileTeamView from './components/mobile/MobileTeamView';
+import MobileEmployeeManagement from './components/mobile/MobileEmployeeManagement';
 
 // Components
 import ResponsiveLayout from './components/layout/ResponsiveLayout';
@@ -44,12 +49,12 @@ function AppContent() {
               </ProtectedRoute>
             }
           >
-            {/* Mobile-specific routes */}
+            {/* Conditionally render mobile or desktop components */}
             <Route index element={isMobile ? <MobileDashboard /> : <EnhancedDashboardPage />} />
-            <Route path="calendar" element={<CalendarPage />} />
+            <Route path="calendar" element={isMobile ? <MobileCalendar /> : <CalendarPage />} />
             <Route path="request" element={isMobile ? <MobileRequestFormPage /> : <RequestFormPage />} />
-            <Route path="team" element={<TeamOverviewPage />} />
-            <Route path="employees" element={<EmployeeManagementPage />} />
+            <Route path="team" element={isMobile ? <MobileTeamView /> : <TeamOverviewPage />} />
+            <Route path="employees" element={isMobile ? <MobileEmployeeManagement /> : <EmployeeManagementPage />} />
           </Route>
         </Routes>
       </Router>

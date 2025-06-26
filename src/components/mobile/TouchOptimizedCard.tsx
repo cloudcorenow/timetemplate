@@ -17,7 +17,7 @@ const TouchOptimizedCard: React.FC<TouchOptimizedCardProps> = ({
     <div
       className={`
         rounded-xl bg-white shadow-sm transition-all duration-200 
-        ${onClick && !disabled ? 'active:scale-95 active:shadow-md cursor-pointer' : ''}
+        ${onClick && !disabled ? 'active:scale-98 active:shadow-md cursor-pointer' : ''}
         ${disabled ? 'opacity-50 cursor-not-allowed' : ''}
         ${className}
       `}
