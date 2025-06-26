@@ -445,8 +445,30 @@ const MobileRequestFormPage: React.FC = () => {
             </h1>
           </div>
           
-          <div className="text-sm text-gray-500 dark:text-gray-400">
-            {currentStep} of {totalSteps}
+          <div className="flex items-center space-x-2">
+            <div className="text-sm text-gray-500 dark:text-gray-400">
+              {currentStep} of {totalSteps}
+            </div>
+            
+            {/* Next/Submit button at top */}
+            {currentStep < totalSteps ? (
+              <Button
+                size="sm"
+                onClick={() => setCurrentStep(currentStep + 1)}
+                disabled={!canProceedToNextStep()}
+              >
+                Next
+              </Button>
+            ) : (
+              <Button
+                size="sm"
+                onClick={handleSubmit}
+                loading={isSubmitting}
+                disabled={!canProceedToNextStep()}
+              >
+                Submit
+              </Button>
+            )}
           </div>
         </div>
 
@@ -464,42 +486,21 @@ const MobileRequestFormPage: React.FC = () => {
         {renderStep()}
       </div>
 
-      {/* Bottom Actions - Fixed positioning with proper z-index and iOS safe area */}
-      <div className="fixed bottom-0 left-0 right-0 z-20 border-t border-gray-200 dark:border-gray-700 bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm p-4 ios-safe-bottom">
-        <div className="flex space-x-3">
-          {currentStep > 1 && (
-            <Button
-              variant="secondary"
-              onClick={() => setCurrentStep(currentStep - 1)}
-              className="flex-1"
-            >
-              Back
-            </Button>
-          )}
-          
-          {currentStep < totalSteps ? (
-            <Button
-              onClick={() => setCurrentStep(currentStep + 1)}
-              disabled={!canProceedToNextStep()}
-              className="flex-1"
-            >
-              Next
-            </Button>
-          ) : (
-            <Button
-              onClick={handleSubmit}
-              loading={isSubmitting}
-              disabled={!canProceedToNextStep()}
-              className="flex-1"
-            >
-              Submit Request
-            </Button>
-          )}
+      {/* Back Button - Fixed at bottom */}
+      {currentStep > 1 && (
+        <div className="fixed bottom-0 left-0 right-0 z-10 border-t border-gray-200 dark:border-gray-700 bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm p-4 ios-safe-bottom">
+          <Button
+            variant="secondary"
+            onClick={() => setCurrentStep(currentStep - 1)}
+            className="w-full"
+          >
+            Back
+          </Button>
         </div>
-      </div>
+      )}
 
       {/* Bottom padding to account for fixed button */}
-      <div className="h-28" />
+      <div className="h-20" />
     </div>
   );
 };
