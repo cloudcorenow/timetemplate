@@ -98,7 +98,7 @@ const CacheDebugPanel: React.FC = () => {
           <div className="space-y-1 text-xs">
             <div className="flex justify-between">
               <span>Cache Size:</span>
-              <span className="font-mono">{requestStore.cacheSize} entries</span>
+              <span className="font-mono">{requestStore.cache.size} entries</span>
             </div>
             <div className="flex justify-between">
               <span>Loading:</span>
@@ -167,7 +167,7 @@ const CacheDebugPanel: React.FC = () => {
       </div>
 
       <div className="mt-3 rounded bg-blue-50 p-2 text-xs text-blue-700">
-        <strong>Legend:</strong> ✓ = Fresh (≤30s), ⚠ = Stale (>30s)
+        <strong>Legend:</strong> ✓ = Fresh (≤30s), ⚠ = Stale (&gt;30s)
       </div>
     </div>
   );
