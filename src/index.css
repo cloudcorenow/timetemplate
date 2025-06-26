@@ -363,19 +363,21 @@
 /* Dark mode styles */
 @layer base {
   .dark body {
-    @apply bg-gray-900 text-gray-100;
+    @apply bg-gray-900;
+    color: #f3f4f6;
   }
   
   .dark h1, .dark h2, .dark h3, .dark h4, .dark h5, .dark h6 {
-    @apply text-white;
+    color: #ffffff;
   }
   
   .dark p {
-    @apply text-gray-300;
+    color: #d1d5db;
   }
   
   .dark input, .dark textarea, .dark select {
-    @apply bg-gray-800 border-gray-700 text-white;
+    @apply bg-gray-800 border-gray-700;
+    color: #ffffff;
   }
   
   .dark input::placeholder, .dark textarea::placeholder {
@@ -383,7 +385,7 @@
   }
   
   .dark button {
-    @apply text-gray-200;
+    color: #e5e7eb;
   }
   
   .dark .bg-white {
@@ -391,19 +393,19 @@
   }
   
   .dark .text-gray-900 {
-    @apply text-white;
+    color: #ffffff;
   }
   
   .dark .text-gray-800 {
-    @apply text-gray-100;
+    color: #f3f4f6;
   }
   
   .dark .text-gray-700 {
-    @apply text-gray-200;
+    color: #e5e7eb;
   }
   
   .dark .text-gray-600 {
-    @apply text-gray-300;
+    color: #d1d5db;
   }
   
   .dark .text-gray-500 {
@@ -432,6 +434,15 @@
   
   .dark .hover\:bg-gray-50:hover {
     @apply hover:bg-gray-800;
+  }
+  
+  /* Fixed shadow styles for dark mode */
+  .dark .shadow-md {
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2), 0 2px 4px -2px rgba(0, 0, 0, 0.2);
+  }
+  
+  .dark .shadow-lg {
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 4px 6px -4px rgba(0, 0, 0, 0.2);
   }
 }
 
