@@ -203,41 +203,42 @@ const EnhancedHeader: React.FC<EnhancedHeaderProps> = ({ openSidebar }) => {
         </div>
       </div>
 
-      {/* Avatar Update Modal - Better positioning */}
+      {/* Avatar Update Modal - Positioned lower in viewport */}
       {showAvatarModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 animate-fade-in p-4">
-          <div 
-            className="w-full max-w-md rounded-xl bg-white shadow-xl animate-scale-in"
-            style={{
-              maxHeight: 'calc(100vh - 8rem)', // Leave space from top and bottom
-              marginTop: '2rem',
-              marginBottom: '2rem'
-            }}
-          >
-            <div className="p-6">
-              <h2 className="mb-6 text-lg font-semibold text-gray-900">Update Profile Picture</h2>
-              
-              <div className="flex flex-col items-center space-y-6">
-                <ImageUpload
-                  currentImage={user?.avatar}
-                  onImageChange={handleAvatarUpdate}
-                  size="lg"
-                  disabled={isUpdatingAvatar}
-                />
+        <div className="fixed inset-0 z-50 bg-black bg-opacity-50 animate-fade-in">
+          <div className="flex min-h-screen items-center justify-center p-4">
+            <div 
+              className="w-full max-w-md rounded-xl bg-white shadow-xl animate-scale-in"
+              style={{
+                marginTop: '10vh', // Push it down from the top
+                marginBottom: '10vh' // Leave space at bottom
+              }}
+            >
+              <div className="p-6">
+                <h2 className="mb-6 text-lg font-semibold text-gray-900">Update Profile Picture</h2>
                 
-                {isUpdatingAvatar && (
-                  <p className="text-sm text-blue-600">Updating your profile picture...</p>
-                )}
-              </div>
-              
-              <div className="mt-6 flex justify-end">
-                <Button
-                  variant="secondary"
-                  onClick={() => setShowAvatarModal(false)}
-                  disabled={isUpdatingAvatar}
-                >
-                  Close
-                </Button>
+                <div className="flex flex-col items-center space-y-6">
+                  <ImageUpload
+                    currentImage={user?.avatar}
+                    onImageChange={handleAvatarUpdate}
+                    size="lg"
+                    disabled={isUpdatingAvatar}
+                  />
+                  
+                  {isUpdatingAvatar && (
+                    <p className="text-sm text-blue-600">Updating your profile picture...</p>
+                  )}
+                </div>
+                
+                <div className="mt-6 flex justify-end">
+                  <Button
+                    variant="secondary"
+                    onClick={() => setShowAvatarModal(false)}
+                    disabled={isUpdatingAvatar}
+                  >
+                    Close
+                  </Button>
+                </div>
               </div>
             </div>
           </div>
