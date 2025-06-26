@@ -1,14 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { X, Calendar, Clock, Save, AlertTriangle } from 'lucide-react';
-import { format } from 'date-fns';
-import { DayPicker, DateRange } from 'react-day-picker';
-import 'react-day-picker/dist/style.css';
-import { useRequestStore } from '../../store/requestStore';
-import { TimeOffRequest, RequestType } from '../../types/request';
+import { X, Calendar, Clock, FileText, User } from 'lucide-react';
 import { useToast } from '../../hooks/useToast';
-import Button from '../ui/Button';
-import LoadingSpinner from '../ui/LoadingSpinner';
-import Badge from '../ui/Badge';
+import { apiService } from '../../services/api';
+import { useRequestStore } from '../../store/requestStore';
 
 interface EditRequestModalProps {
   isOpen: boolean;
@@ -16,353 +10,252 @@ interface EditRequestModalProps {
   requestId: string;
 }
 
-const EditRequestModal: React.FC<EditRequestModalProps> = ({ isOpen, onClose, requestId }) => {
-  const [request, setRequest] = useState<TimeOffRequest | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+const EditRequestModal: React.FC<EditRequestModalProps> = ({
+  isOpen,
+  onClose,
+  requestId
+}) => {
+  const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [range, setRange] = useState<DateRange | undefined>();
-  const [type, setType] = useState<RequestType>('paid time off');
-  const [reason, setReason] = useState('');
-  const [originalClockIn, setOriginalClockIn] = useState('');
-  const [originalClockOut, setOriginalClockOut] = useState('');
-  const [requestedClockIn, setRequestedClockIn] = useState('');
-  const [requestedClockOut, setRequestedClockOut] = useState('');
-  const [error, setError] = useState('');
+  const [request, setRequest] = useState<any>(null);
+  const [formData, setFormData] = useState({
+    startDate: '',
+    endDate: '',
+    reason: '',
+    type: 'vacation',
+    notes: ''
+  });
   
-  const { requests, updateRequest } = useRequestStore();
   const { addToast } = useToast();
+  const { forceRefresh } = useRequestStore();
 
   useEffect(() => {
     if (isOpen && requestId) {
-      setIsLoading(true);
-      // Find the request in the store
-      const foundRequest = requests.find(r => r.id === requestId);
-      if (foundRequest) {
-        setRequest(foundRequest);
-        
-        // Initialize form values
-        setType(foundRequest.type);
-        setReason(foundRequest.reason);
-        setRange({
-          from: new Date(foundRequest.startDate),
-          to: new Date(foundRequest.endDate)
-        });
-        
-        // Set time edit fields if applicable
-        if (foundRequest.type === 'time edit') {
-          setOriginalClockIn(foundRequest.originalClockIn || '');
-          setOriginalClockOut(foundRequest.originalClockOut || '');
-          setRequestedClockIn(foundRequest.requestedClockIn || '');
-          setRequestedClockOut(foundRequest.requestedClockOut || '');
-        }
-      }
+      fetchRequestDetails();
+    }
+  }, [isOpen, requestId]);
+
+  const fetchRequestDetails = async () => {
+    setIsLoading(true);
+    try {
+      const requestData = await apiService.getRequest(requestId);
+      setRequest(requestData);
+      setFormData({
+        startDate: requestData.start_date || '',
+        endDate: requestData.end_date || '',
+        reason: requestData.reason || '',
+        type: requestData.type || 'vacation',
+        notes: requestData.notes || ''
+      });
+    } catch (error) {
+      console.error('Failed to fetch request details:', error);
+      addToast({
+        type: 'error',
+        title: 'Error',
+        message: 'Failed to load request details'
+      });
+    } finally {
       setIsLoading(false);
     }
-  }, [isOpen, requestId, requests]);
+  };
 
-  const handleSave = async () => {
-    if (!request) return;
-    
-    if (!range?.from) {
-      setError('Please select a date');
-      return;
-    }
-
-    if (type === 'time edit') {
-      if (!originalClockIn || !originalClockOut || !requestedClockIn || !requestedClockOut) {
-        setError('Please fill in all time fields for time edit requests');
-        return;
-      }
-    } else {
-      if (!range?.to) {
-        setError('Please select a date range');
-        return;
-      }
-    }
-    
-    if (!reason.trim()) {
-      setError('Please provide a reason for your request');
-      return;
-    }
-    
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     setIsSaving(true);
-    setError('');
-    
+
     try {
-      // In a real app, this would call the API to update the request
-      // For now, we'll just update the local store
-      await updateRequest({
-        ...request,
-        startDate: range.from,
-        endDate: range.to || range.from,
-        type,
-        reason,
-        ...(type === 'time edit' && {
-          originalClockIn,
-          originalClockOut,
-          requestedClockIn,
-          requestedClockOut
-        })
+      await apiService.updateRequest(requestId, {
+        start_date: formData.startDate,
+        end_date: formData.endDate,
+        reason: formData.reason,
+        type: formData.type,
+        notes: formData.notes
       });
+
+      await forceRefresh();
       
       addToast({
         type: 'success',
         title: 'Request Updated',
-        message: 'Your request has been updated successfully'
+        message: 'Your time-off request has been updated successfully'
       });
       
       onClose();
     } catch (error) {
-      console.error('Error updating request:', error);
-      setError('Failed to update request. Please try again.');
-      
+      console.error('Failed to update request:', error);
       addToast({
         type: 'error',
         title: 'Update Failed',
-        message: 'Failed to update request. Please try again.'
+        message: 'Failed to update the request. Please try again.'
       });
     } finally {
       setIsSaving(false);
     }
   };
 
-  // Configure disabled dates based on request type
-  const getDisabledDates = () => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    if (type === 'time edit') {
-      return { after: today };
-    } else {
-      return { before: today };
-    }
+  const handleInputChange = (field: string, value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
   };
-
-  const isTimeEditRequest = type === 'time edit';
 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
-      <div className="w-full max-w-2xl rounded-lg bg-white shadow-xl max-h-[90vh] overflow-y-auto">
-        {/* Header */}
-        <div className="sticky top-0 z-10 border-b border-gray-200 bg-white px-6 py-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-gray-900">Edit Request</h2>
+    <div className="fixed inset-0 z-50 overflow-y-auto">
+      <div className="flex min-h-screen items-center justify-center p-4">
+        <div className="fixed inset-0 bg-black bg-opacity-50 transition-opacity" onClick={onClose} />
+        
+        <div className="relative w-full max-w-2xl transform rounded-lg bg-white shadow-xl transition-all">
+          {/* Header */}
+          <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4">
+            <h2 className="text-xl font-semibold text-gray-900">Edit Time-Off Request</h2>
             <button
               onClick={onClose}
-              className="rounded-full p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+              className="rounded-full p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors"
             >
               <X size={20} />
             </button>
           </div>
-        </div>
 
-        {/* Content */}
-        <div className="px-6 py-4">
-          {isLoading ? (
-            <div className="flex h-64 items-center justify-center">
-              <LoadingSpinner size="lg" />
-            </div>
-          ) : !request ? (
-            <div className="flex h-64 items-center justify-center">
-              <p className="text-gray-500">Request not found</p>
-            </div>
-          ) : (
-            <div className="space-y-6">
-              {/* Request Type */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Request Type
-                </label>
-                <select
-                  value={type}
-                  onChange={(e) => setType(e.target.value as RequestType)}
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                  disabled={request.status !== 'pending'}
-                >
-                  <option value="paid time off">Paid Time Off</option>
-                  <option value="sick leave">Sick Leave</option>
-                  <option value="time edit">Time Edit</option>
-                  <option value="other">Other</option>
-                </select>
-                {request.status !== 'pending' && (
-                  <p className="mt-1 text-xs text-amber-600">
-                    Request type cannot be changed for non-pending requests
-                  </p>
-                )}
+          {/* Content */}
+          <div className="px-6 py-4">
+            {isLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                <span className="ml-3 text-gray-600">Loading request details...</span>
               </div>
+            ) : (
+              <form onSubmit={handleSubmit} className="space-y-6">
+                {/* Request Type */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <FileText size={16} className="inline mr-2" />
+                    Request Type
+                  </label>
+                  <select
+                    value={formData.type}
+                    onChange={(e) => handleInputChange('type', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    required
+                  >
+                    <option value="vacation">Vacation</option>
+                    <option value="sick">Sick Leave</option>
+                    <option value="personal">Personal</option>
+                    <option value="emergency">Emergency</option>
+                    <option value="other">Other</option>
+                  </select>
+                </div>
 
-              {/* Date Selection */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  {isTimeEditRequest ? 'Date' : 'Date Range'}
-                </label>
-                <div className="rounded-lg border border-gray-200 p-4 bg-gray-50">
-                  <DayPicker
-                    mode={isTimeEditRequest ? "single" : "range"}
-                    selected={range}
-                    onSelect={(selected) => {
-                      if (isTimeEditRequest && selected) {
-                        // For time edit, set both from and to to the same date
-                        const singleDate = selected as Date;
-                        setRange({ from: singleDate, to: singleDate });
-                      } else {
-                        setRange(selected as DateRange);
-                      }
-                    }}
-                    disabled={request.status !== 'pending' ? true : getDisabledDates()}
-                    className="mx-auto"
+                {/* Date Range */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <Calendar size={16} className="inline mr-2" />
+                      Start Date
+                    </label>
+                    <input
+                      type="date"
+                      value={formData.startDate}
+                      onChange={(e) => handleInputChange('startDate', e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      required
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <Calendar size={16} className="inline mr-2" />
+                      End Date
+                    </label>
+                    <input
+                      type="date"
+                      value={formData.endDate}
+                      onChange={(e) => handleInputChange('endDate', e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      required
+                    />
+                  </div>
+                </div>
+
+                {/* Reason */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <FileText size={16} className="inline mr-2" />
+                    Reason
+                  </label>
+                  <textarea
+                    value={formData.reason}
+                    onChange={(e) => handleInputChange('reason', e.target.value)}
+                    rows={3}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="Please provide a reason for your time-off request..."
+                    required
                   />
                 </div>
-                {request.status !== 'pending' && (
-                  <p className="mt-1 text-xs text-amber-600">
-                    Dates cannot be changed for non-pending requests
-                  </p>
-                )}
-              </div>
 
-              {/* Time Edit Fields */}
-              {isTimeEditRequest && (
-                <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-                  <div>
-                    <h3 className="text-sm font-medium text-gray-700 mb-2">Original Times</h3>
-                    <div className="grid grid-cols-2 gap-4">
+                {/* Additional Notes */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <FileText size={16} className="inline mr-2" />
+                    Additional Notes (Optional)
+                  </label>
+                  <textarea
+                    value={formData.notes}
+                    onChange={(e) => handleInputChange('notes', e.target.value)}
+                    rows={2}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="Any additional information..."
+                  />
+                </div>
+
+                {/* Employee Info (Read-only) */}
+                {request && (
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <h3 className="text-sm font-medium text-gray-700 mb-2">
+                      <User size={16} className="inline mr-2" />
+                      Request Information
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                       <div>
-                        <label className="block text-xs text-gray-500 mb-1">
-                          Clock In
-                        </label>
-                        <input
-                          type="time"
-                          value={originalClockIn}
-                          onChange={(e) => setOriginalClockIn(e.target.value)}
-                          className="w-full rounded-lg border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                          disabled={request.status !== 'pending'}
-                        />
+                        <span className="text-gray-500">Employee:</span>
+                        <span className="ml-2 font-medium">{request.employee_name}</span>
                       </div>
                       <div>
-                        <label className="block text-xs text-gray-500 mb-1">
-                          Clock Out
-                        </label>
-                        <input
-                          type="time"
-                          value={originalClockOut}
-                          onChange={(e) => setOriginalClockOut(e.target.value)}
-                          className="w-full rounded-lg border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                          disabled={request.status !== 'pending'}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-medium text-gray-700 mb-2">Requested Times</h3>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-xs text-gray-500 mb-1">
-                          Clock In
-                        </label>
-                        <input
-                          type="time"
-                          value={requestedClockIn}
-                          onChange={(e) => setRequestedClockIn(e.target.value)}
-                          className="w-full rounded-lg border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                          disabled={request.status !== 'pending'}
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs text-gray-500 mb-1">
-                          Clock Out
-                        </label>
-                        <input
-                          type="time"
-                          value={requestedClockOut}
-                          onChange={(e) => setRequestedClockOut(e.target.value)}
-                          className="w-full rounded-lg border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                          disabled={request.status !== 'pending'}
-                        />
+                        <span className="text-gray-500">Status:</span>
+                        <span className={`ml-2 px-2 py-1 rounded-full text-xs font-medium ${
+                          request.status === 'approved' ? 'bg-green-100 text-green-800' :
+                          request.status === 'rejected' ? 'bg-red-100 text-red-800' :
+                          'bg-yellow-100 text-yellow-800'
+                        }`}>
+                          {request.status?.charAt(0).toUpperCase() + request.status?.slice(1)}
+                        </span>
                       </div>
                     </div>
                   </div>
-                </div>
-              )}
-
-              {/* Reason */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Reason
-                </label>
-                <textarea
-                  value={reason}
-                  onChange={(e) => setReason(e.target.value)}
-                  rows={4}
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                  placeholder="Please provide details about your request..."
-                  disabled={request.status !== 'pending'}
-                />
-                {request.status !== 'pending' && (
-                  <p className="mt-1 text-xs text-amber-600">
-                    Reason cannot be changed for non-pending requests
-                  </p>
                 )}
-              </div>
+              </form>
+            )}
+          </div>
 
-              {/* Status Information */}
-              <div className="rounded-lg bg-gray-50 p-4">
-                <div className="flex items-center mb-2">
-                  <Clock size={18} className="mr-2 text-blue-600" />
-                  <h4 className="font-medium text-gray-900">Status Information</h4>
-                </div>
-                <div className="flex items-center">
-                  <span className="text-gray-700 mr-2">Current Status:</span>
-                  <Badge 
-                    variant={
-                      request.status === 'pending' ? 'warning' :
-                      request.status === 'approved' ? 'success' : 'error'
-                    }
-                    size="sm"
-                  >
-                    {request.status.charAt(0).toUpperCase() + request.status.slice(1)}
-                  </Badge>
-                </div>
-                {request.status !== 'pending' && (
-                  <p className="mt-2 text-sm text-amber-600">
-                    <AlertTriangle size={14} className="inline mr-1" />
-                    This request has already been {request.status}. Only pending requests can be fully edited.
-                  </p>
-                )}
-              </div>
-
-              {/* Error Message */}
-              {error && (
-                <div className="rounded-lg bg-red-50 border border-red-200 p-4">
-                  <div className="flex items-start">
-                    <AlertTriangle size={18} className="mr-2 text-red-600 mt-0.5" />
-                    <p className="text-red-700">{error}</p>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-
-        {/* Footer */}
-        <div className="sticky bottom-0 border-t border-gray-200 bg-white px-6 py-4">
-          <div className="flex justify-end space-x-3">
-            <Button
-              variant="secondary"
+          {/* Footer */}
+          <div className="flex justify-end space-x-3 border-t border-gray-200 px-6 py-4">
+            <button
+              type="button"
               onClick={onClose}
-              disabled={isSaving}
+              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
             >
               Cancel
-            </Button>
-            <Button
-              onClick={handleSave}
-              disabled={isSaving || request?.status !== 'pending'}
-              loading={isSaving}
-              icon={<Save size={16} />}
+            </button>
+            <button
+              type="submit"
+              onClick={handleSubmit}
+              disabled={isSaving || isLoading}
+              className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Save Changes
-            </Button>
+              {isSaving ? 'Saving...' : 'Save Changes'}
+            </button>
           </div>
         </div>
       </div>
