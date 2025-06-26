@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Upload, Mail, LogOut, Camera, User, Settings, Moon, Sun, HelpCircle } from 'lucide-react';
+import { X, Upload, Mail, LogOut, Camera, User, Moon, Sun, HelpCircle } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '../../hooks/useToast';
@@ -112,13 +112,6 @@ const MobileUserMenu: React.FC<MobileUserMenuProps> = ({ isOpen, onClose }) => {
             >
               <Mail size={20} className="mr-3 text-gray-500 dark:text-gray-400" />
               Email Preferences
-            </button>
-            
-            <button
-              className="flex w-full items-center rounded-lg px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800"
-            >
-              <Settings size={20} className="mr-3 text-gray-500 dark:text-gray-400" />
-              Account Settings
             </button>
             
             <button
