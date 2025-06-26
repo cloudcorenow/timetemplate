@@ -1,15 +1,20 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Calendar } from 'lucide-react';
+import { useToast } from '../hooks/useToast';
+import { Calendar, Eye, EyeOff } from 'lucide-react';
+import GradientBackground from '../components/ui/GradientBackground';
+import Button from '../components/ui/Button';
+import LoadingSpinner from '../components/ui/LoadingSpinner';
 
 const LoginPage: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
   const { login, isAuthenticated } = useAuth();
+  const { addToast } = useToast();
 
   React.useEffect(() => {
     if (isAuthenticated) {
@@ -20,22 +25,38 @@ const LoginPage: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !password) {
-      setError('Please enter both email and password');
+      addToast({
+        type: 'error',
+        title: 'Missing Information',
+        message: 'Please enter both email and password'
+      });
       return;
     }
 
     setIsLoading(true);
-    setError('');
 
     try {
       const success = await login(email, password);
       if (success) {
+        addToast({
+          type: 'success',
+          title: 'Welcome Back!',
+          message: 'You have been successfully logged in.'
+        });
         navigate('/');
       } else {
-        setError('Invalid email or password. Please use the demo credentials below.');
+        addToast({
+          type: 'error',
+          title: 'Login Failed',
+          message: 'Invalid email or password. Please use the demo credentials below.'
+        });
       }
     } catch (err) {
-      setError('An error occurred during login');
+      addToast({
+        type: 'error',
+        title: 'Login Error',
+        message: 'An error occurred during login. Please try again.'
+      });
       console.error(err);
     } finally {
       setIsLoading(false);
@@ -45,17 +66,21 @@ const LoginPage: React.FC = () => {
   const handleDemoLogin = (demoEmail: string) => {
     setEmail(demoEmail);
     setPassword('password');
-    setError('');
+    addToast({
+      type: 'info',
+      title: 'Demo Account Selected',
+      message: `Using ${demoEmail} for demonstration`
+    });
   };
 
   return (
-    <div className="flex min-h-screen flex-col bg-gradient-to-br from-blue-50 to-blue-100">
+    <GradientBackground className="flex min-h-screen flex-col">
       <div className="mx-auto mt-8 w-full max-w-md px-4 sm:px-0">
-        <div className="flex flex-col items-center justify-center">
-          <div className="mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-blue-600 text-white">
-            <Calendar size={32} />
+        <div className="flex flex-col items-center justify-center animate-fade-in">
+          <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-600 to-blue-700 text-white shadow-lg">
+            <Calendar size={40} />
           </div>
-          <h2 className="mb-1 text-center text-3xl font-bold tracking-tight text-gray-900">
+          <h2 className="mb-2 text-center text-4xl font-bold tracking-tight text-gray-900">
             TimeOff Manager
           </h2>
           <p className="text-center text-gray-600">
@@ -63,18 +88,12 @@ const LoginPage: React.FC = () => {
           </p>
         </div>
 
-        <div className="mt-8 rounded-lg bg-white p-8 shadow-lg">
+        <div className="mt-8 rounded-2xl bg-white p-8 shadow-xl animate-scale-in">
           <form className="space-y-6" onSubmit={handleSubmit}>
-            {error && (
-              <div className="rounded-md bg-red-50 p-4 text-sm text-red-700">
-                {error}
-              </div>
-            )}
-
             <div>
               <label 
                 htmlFor="email" 
-                className="block text-sm font-medium text-gray-700"
+                className="block text-sm font-medium text-gray-700 mb-2"
               >
                 Email address
               </label>
@@ -86,7 +105,7 @@ const LoginPage: React.FC = () => {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500"
+                className="w-full rounded-lg border border-gray-300 px-4 py-3 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-colors"
                 placeholder="Enter your email"
               />
             </div>
@@ -94,41 +113,49 @@ const LoginPage: React.FC = () => {
             <div>
               <label 
                 htmlFor="password" 
-                className="block text-sm font-medium text-gray-700"
+                className="block text-sm font-medium text-gray-700 mb-2"
               >
                 Password
               </label>
-              <input
-                id="password"
-                name="password"
-                type="password"
-                autoComplete="current-password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500"
-                placeholder="Enter your password"
-              />
+              <div className="relative">
+                <input
+                  id="password"
+                  name="password"
+                  type={showPassword ? 'text' : 'password'}
+                  autoComplete="current-password"
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full rounded-lg border border-gray-300 px-4 py-3 pr-12 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-colors"
+                  placeholder="Enter your password"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                >
+                  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                </button>
+              </div>
             </div>
 
-            <div>
-              <button
-                type="submit"
-                disabled={isLoading}
-                className="flex w-full justify-center rounded-md border border-transparent bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:bg-blue-400"
-              >
-                {isLoading ? 'Signing in...' : 'Sign in'}
-              </button>
-            </div>
+            <Button
+              type="submit"
+              loading={isLoading}
+              className="w-full py-3"
+              size="lg"
+            >
+              Sign in
+            </Button>
           </form>
 
-          <div className="mt-6">
+          <div className="mt-8">
             <div className="relative">
               <div className="absolute inset-0 flex items-center">
                 <div className="w-full border-t border-gray-300" />
               </div>
               <div className="relative flex justify-center text-sm">
-                <span className="bg-white px-2 text-gray-500">Demo Accounts</span>
+                <span className="bg-white px-4 text-gray-500 font-medium">Demo Accounts</span>
               </div>
             </div>
 
@@ -136,35 +163,46 @@ const LoginPage: React.FC = () => {
               <button
                 type="button"
                 onClick={() => handleDemoLogin('employee@example.com')}
-                className="flex w-full justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 transition-colors"
+                className="flex w-full items-center justify-center rounded-lg border border-gray-300 bg-white px-4 py-3 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 transition-all duration-200 hover:shadow-md"
               >
-                👤 Employee Demo
+                <span className="mr-2 text-lg">👤</span>
+                Employee Demo
               </button>
               <button
                 type="button"
                 onClick={() => handleDemoLogin('manager@example.com')}
-                className="flex w-full justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 transition-colors"
+                className="flex w-full items-center justify-center rounded-lg border border-gray-300 bg-white px-4 py-3 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 transition-all duration-200 hover:shadow-md"
               >
-                👔 Manager Demo
+                <span className="mr-2 text-lg">👔</span>
+                Manager Demo
               </button>
               <button
                 type="button"
-                onClick={() => handleDemoLogin('admin@example.com')}
-                className="flex w-full justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 transition-colors"
+                onClick={() => handleDemoLogin('it@sapphiremfg.com')}
+                className="flex w-full items-center justify-center rounded-lg border border-gray-300 bg-white px-4 py-3 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 transition-all duration-200 hover:shadow-md"
               >
-                🔧 Admin Demo
+                <span className="mr-2 text-lg">🔧</span>
+                Admin Demo
               </button>
             </div>
 
-            <div className="mt-4 rounded-md bg-blue-50 p-3 text-center text-xs text-blue-700">
-              <p><strong>Demo Credentials:</strong></p>
-              <p>Email: Any of the demo emails above</p>
-              <p>Password: <code className="bg-blue-100 px-1 rounded">password</code></p>
+            <div className="mt-6 rounded-lg bg-blue-50 border border-blue-200 p-4 text-center">
+              <p className="text-sm font-medium text-blue-900 mb-2">Demo Credentials</p>
+              <p className="text-xs text-blue-700">
+                Email: Any of the demo emails above<br />
+                Password: <code className="bg-blue-100 px-1 rounded font-mono">password</code>
+              </p>
             </div>
           </div>
         </div>
+
+        <div className="mt-8 text-center">
+          <p className="text-xs text-gray-500">
+            © 2025 TimeOff Manager. Built with modern web technologies.
+          </p>
+        </div>
       </div>
-    </div>
+    </GradientBackground>
   );
 };
 

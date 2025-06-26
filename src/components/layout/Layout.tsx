@@ -1,6 +1,6 @@
 import React from 'react';
 import { Outlet } from 'react-router-dom';
-import Header from './Header';
+import EnhancedHeader from './EnhancedHeader';
 import Sidebar from './Sidebar';
 import CacheDebugPanel from '../debug/CacheDebugPanel';
 import { useAuth } from '../../context/AuthContext';
@@ -16,7 +16,7 @@ const Layout: React.FC = () => {
       {/* Mobile sidebar overlay */}
       {sidebarOpen && (
         <div 
-          className="fixed inset-0 z-20 bg-gray-800 bg-opacity-50 md:hidden"
+          className="fixed inset-0 z-20 bg-gray-800 bg-opacity-50 md:hidden animate-fade-in"
           onClick={() => setSidebarOpen(false)}
         />
       )}
@@ -26,8 +26,8 @@ const Layout: React.FC = () => {
 
       {/* Main content */}
       <div className="flex flex-1 flex-col overflow-hidden">
-        <Header openSidebar={() => setSidebarOpen(true)} />
-        <main className="flex-1 overflow-y-auto bg-gray-50 px-4 py-8 md:px-6 lg:px-8">
+        <EnhancedHeader openSidebar={() => setSidebarOpen(true)} />
+        <main className="flex-1 overflow-y-auto bg-gray-50 px-4 py-8 md:px-6 lg:px-8 custom-scrollbar">
           <Outlet />
         </main>
       </div>
