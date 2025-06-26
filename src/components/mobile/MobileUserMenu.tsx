@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Upload, Mail, LogOut, Camera, User, Moon, Sun, HelpCircle } from 'lucide-react';
+import { X, Mail, LogOut, Moon, Sun, HelpCircle } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '../../hooks/useToast';
