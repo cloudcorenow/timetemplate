@@ -985,8 +985,8 @@ app.patch('/api/requests/:id/status', authMiddleware, managerOrAdminMiddleware, 
       emailSubject
     )
 
-    // If request is approved and it's a paid time off or sick leave, notify payroll
-    if (status === 'approved' && (request.type === 'paid time off' || request.type === 'sick leave')) {
+    // If request is approved and it's a paid time off, sick leave, or time edit, notify payroll
+    if (status === 'approved' && (request.type === 'paid time off' || request.type === 'sick leave' || request.type === 'time edit')) {
       // Format dates for email
       const startDate = new Date(request.start_date).toLocaleDateString('en-US', { 
         weekday: 'long', 
@@ -1008,11 +1008,32 @@ app.patch('/api/requests/:id/status', authMiddleware, managerOrAdminMiddleware, 
       const diffTime = Math.abs(end - start);
       const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1; // +1 to include both start and end days
       
+      // Get time details for time edit requests
+      let timeDetails = '';
+      if (request.type === 'time edit') {
+        const timeEditDetails = await c.env.DB.prepare(`
+          SELECT original_clock_in, original_clock_out, requested_clock_in, requested_clock_out
+          FROM time_off_requests WHERE id = ?
+        `).bind(id).first();
+        
+        if (timeEditDetails) {
+          timeDetails = `
+            <p><strong>Time Edit Details:</strong></p>
+            <ul>
+              <li>Original Clock In: ${timeEditDetails.original_clock_in || 'N/A'}</li>
+              <li>Original Clock Out: ${timeEditDetails.original_clock_out || 'N/A'}</li>
+              <li>Requested Clock In: ${timeEditDetails.requested_clock_in || 'N/A'}</li>
+              <li>Requested Clock Out: ${timeEditDetails.requested_clock_out || 'N/A'}</li>
+            </ul>
+          `;
+        }
+      }
+      
       // Send notification to payroll
       const payrollEmail = 'payroll@sapphiremfg.com';
-      const payrollSubject = `🔔 Approved Time Off: ${request.employee_name}`;
+      const payrollSubject = `🔔 Approved ${request.type.charAt(0).toUpperCase() + request.type.slice(1)}: ${request.employee_name}`;
       const payrollMessage = `
-        <p>A time off request has been approved that requires payroll attention:</p>
+        <p>A ${request.type} request has been approved that requires payroll attention:</p>
         
         <ul>
           <li><strong>Employee:</strong> ${request.employee_name}</li>
@@ -1024,7 +1045,9 @@ app.patch('/api/requests/:id/status', authMiddleware, managerOrAdminMiddleware, 
           <li><strong>Approved By:</strong> ${user.name}</li>
         </ul>
         
-        <p>Please ensure this time off is properly recorded in the payroll system.</p>
+        ${timeDetails}
+        
+        <p>Please ensure this ${request.type} is properly recorded in the payroll system.</p>
       `;
       
       await sendEmailNotification(

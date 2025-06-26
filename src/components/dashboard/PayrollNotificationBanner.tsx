@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Info, X, Mail, Check } from 'lucide-react';
+import { Info, X, Mail, Check, Clock } from 'lucide-react';
 
 interface PayrollNotificationBannerProps {
   className?: string;
@@ -8,6 +8,7 @@ interface PayrollNotificationBannerProps {
 const PayrollNotificationBanner: React.FC<PayrollNotificationBannerProps> = ({ className = '' }) => {
   const [isVisible, setIsVisible] = useState(true);
   const [isConfirmed, setIsConfirmed] = useState(false);
+  const [showDetails, setShowDetails] = useState(false);
 
   if (!isVisible) return null;
 
@@ -23,15 +24,49 @@ const PayrollNotificationBanner: React.FC<PayrollNotificationBannerProps> = ({ c
             {isConfirmed ? (
               <div className="flex items-center">
                 <Check className="h-4 w-4 text-green-500 mr-2" />
-                <p>Payroll notifications are enabled. Approved time off requests will automatically notify payroll@sapphiremfg.com.</p>
+                <p>Payroll notifications are enabled. Approved time off and time edit requests will automatically notify payroll@sapphiremfg.com.</p>
               </div>
             ) : (
               <p>
-                When time off requests are approved, an automatic notification is sent to payroll@sapphiremfg.com 
-                to ensure proper processing of paid time off and sick leave.
+                When time off requests (PTO, sick leave, or time edits) are approved, an automatic notification is sent to payroll@sapphiremfg.com 
+                to ensure proper processing.
               </p>
             )}
           </div>
+          
+          {showDetails && (
+            <div className="mt-3 bg-white bg-opacity-50 rounded-md p-3 text-sm text-blue-700">
+              <p className="font-medium mb-2">Notification details include:</p>
+              <ul className="list-disc pl-5 space-y-1">
+                <li>Employee name and department</li>
+                <li>Type of request (PTO, sick leave, or time edit)</li>
+                <li>Start and end dates</li>
+                <li>Total number of days</li>
+                <li>For time edits: original and requested clock times</li>
+                <li>Manager who approved the request</li>
+              </ul>
+              <button
+                type="button"
+                className="mt-2 text-blue-600 hover:text-blue-800 font-medium flex items-center"
+                onClick={() => setShowDetails(false)}
+              >
+                <X className="h-3 w-3 mr-1" />
+                Hide details
+              </button>
+            </div>
+          )}
+          
+          {!showDetails && !isConfirmed && (
+            <button
+              type="button"
+              className="mt-1 text-blue-600 hover:text-blue-800 font-medium flex items-center"
+              onClick={() => setShowDetails(true)}
+            >
+              <Clock className="h-3 w-3 mr-1" />
+              View notification details
+            </button>
+          )}
+          
           {!isConfirmed && (
             <div className="mt-3">
               <button
