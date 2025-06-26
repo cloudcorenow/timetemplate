@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Mail, Check, AlertCircle } from 'lucide-react';
+import { X, Mail, Check, AlertCircle, Info } from 'lucide-react';
 import { apiService } from '../../services/api';
 
 interface EmailPreferencesProps {
@@ -14,6 +14,7 @@ const EmailPreferences: React.FC<EmailPreferencesProps> = ({ isOpen, onClose }) 
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [showPayrollInfo, setShowPayrollInfo] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -132,6 +133,44 @@ const EmailPreferences: React.FC<EmailPreferencesProps> = ({ isOpen, onClose }) 
                   />
                   <div className="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-blue-600 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300"></div>
                 </label>
+              </div>
+            </div>
+
+            {/* Payroll Notifications Info */}
+            <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
+              <div className="flex items-start">
+                <Info size={16} className="mr-2 mt-0.5 text-blue-600 flex-shrink-0" />
+                <div>
+                  <h3 className="font-medium text-blue-800">Payroll Notifications</h3>
+                  <p className="mt-1 text-sm text-blue-700">
+                    When time off requests are approved, an automatic notification is sent to payroll@sapphiremfg.com
+                  </p>
+                  {showPayrollInfo ? (
+                    <div className="mt-2 text-sm text-blue-700">
+                      <p className="mb-2">These notifications include:</p>
+                      <ul className="list-disc pl-5 space-y-1">
+                        <li>Employee name and department</li>
+                        <li>Type of time off (PTO or sick leave)</li>
+                        <li>Start and end dates</li>
+                        <li>Total number of days</li>
+                        <li>Manager who approved the request</li>
+                      </ul>
+                      <button 
+                        onClick={() => setShowPayrollInfo(false)}
+                        className="mt-2 text-blue-600 hover:text-blue-800 font-medium"
+                      >
+                        Show less
+                      </button>
+                    </div>
+                  ) : (
+                    <button 
+                      onClick={() => setShowPayrollInfo(true)}
+                      className="mt-1 text-sm text-blue-600 hover:text-blue-800 font-medium"
+                    >
+                      Learn more
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
 

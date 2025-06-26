@@ -10,6 +10,7 @@ import EnhancedRequestCard from '../components/dashboard/EnhancedRequestCard';
 import GradientBackground from '../components/ui/GradientBackground';
 import Button from '../components/ui/Button';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
+import PayrollNotificationBanner from '../components/dashboard/PayrollNotificationBanner';
 
 const EnhancedDashboardPage: React.FC = () => {
   const { user, isManager, isAdmin } = useAuth();
@@ -149,6 +150,11 @@ const EnhancedDashboardPage: React.FC = () => {
             )}
           </div>
         </div>
+
+        {/* Payroll Notification Banner - Only show for admins and managers */}
+        {(isAdmin || isManager) && (
+          <PayrollNotificationBanner />
+        )}
 
         {/* Enhanced info for managers/admins */}
         {(isManager || isAdmin) && (

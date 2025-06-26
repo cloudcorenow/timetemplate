@@ -948,10 +948,14 @@ app.patch('/api/requests/:id/status', authMiddleware, managerOrAdminMiddleware, 
       return c.json({ message: 'Invalid status' }, 400)
     }
 
-    // Get the request to find the employee
-    const request = await c.env.DB.prepare(
-      'SELECT employee_id, type FROM time_off_requests WHERE id = ?'
-    ).bind(id).first()
+    // Get the request to find the employee and request details
+    const request = await c.env.DB.prepare(`
+      SELECT r.employee_id, r.type, r.start_date, r.end_date, 
+             u.name as employee_name, u.department as employee_department
+      FROM time_off_requests r
+      JOIN users u ON r.employee_id = u.id
+      WHERE r.id = ?
+    `).bind(id).first()
 
     if (!request) {
       return c.json({ message: 'Request not found' }, 404)
@@ -980,6 +984,59 @@ app.patch('/api/requests/:id/status', authMiddleware, managerOrAdminMiddleware, 
       notificationMessage,
       emailSubject
     )
+
+    // If request is approved and it's a paid time off or sick leave, notify payroll
+    if (status === 'approved' && (request.type === 'paid time off' || request.type === 'sick leave')) {
+      // Format dates for email
+      const startDate = new Date(request.start_date).toLocaleDateString('en-US', { 
+        weekday: 'long', 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric' 
+      });
+      
+      const endDate = new Date(request.end_date).toLocaleDateString('en-US', { 
+        weekday: 'long', 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric' 
+      });
+      
+      // Calculate number of days
+      const start = new Date(request.start_date);
+      const end = new Date(request.end_date);
+      const diffTime = Math.abs(end - start);
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1; // +1 to include both start and end days
+      
+      // Send notification to payroll
+      const payrollEmail = 'payroll@sapphiremfg.com';
+      const payrollSubject = `🔔 Approved Time Off: ${request.employee_name}`;
+      const payrollMessage = `
+        <p>A time off request has been approved that requires payroll attention:</p>
+        
+        <ul>
+          <li><strong>Employee:</strong> ${request.employee_name}</li>
+          <li><strong>Department:</strong> ${request.employee_department}</li>
+          <li><strong>Type:</strong> ${request.type}</li>
+          <li><strong>Start Date:</strong> ${startDate}</li>
+          <li><strong>End Date:</strong> ${endDate}</li>
+          <li><strong>Total Days:</strong> ${diffDays}</li>
+          <li><strong>Approved By:</strong> ${user.name}</li>
+        </ul>
+        
+        <p>Please ensure this time off is properly recorded in the payroll system.</p>
+      `;
+      
+      await sendEmailNotification(
+        c.env,
+        payrollEmail,
+        payrollSubject,
+        payrollMessage,
+        'info'
+      );
+      
+      console.log(`✅ Payroll notification sent for approved ${request.type} request`);
+    }
 
     return c.json({ message: 'Request updated successfully' })
   } catch (error) {
