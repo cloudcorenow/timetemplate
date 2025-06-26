@@ -423,7 +423,7 @@ async function initDatabase(db) {
         ['2', 'Ana Ramirez', 'manager@example.com', 'password', 'manager', 'Engineering', 'https://images.pexels.com/photos/774909/pexels-photo-774909.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1', true, true],
         ['3', 'Alissa Pryor', 'alice@example.com', 'password', 'employee', 'Marketing', 'https://images.pexels.com/photos/415829/pexels-photo-415829.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1', true, true],
         ['4', 'Charly Osornio', 'bob@example.com', 'password', 'employee', 'Sales', 'https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1', true, true],
-        ['5', 'Admin User', 'admin@example.com', 'password', 'admin', 'IT', 'https://images.pexels.com/photos/614810/pexels-photo-614810.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1', true, true],
+        ['5', 'Admin User', 'it@sapphiremfg.com', 'password', 'admin', 'IT', 'https://images.pexels.com/photos/614810/pexels-photo-614810.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1', true, true],
         ['6', 'Sarah Johnson', 'sarah@example.com', 'password', 'employee', 'Project Management', 'https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1', true, true],
         ['7', 'Mike Rodriguez', 'mike@example.com', 'password', 'employee', 'Shop', 'https://images.pexels.com/photos/1681010/pexels-photo-1681010.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1', true, true]
       ]
@@ -484,6 +484,15 @@ async function initDatabase(db) {
 
       console.log('✅ Sample data inserted successfully')
     } else {
+      // Update existing admin user email if it exists
+      const adminUser = await db.prepare('SELECT id FROM users WHERE role = "admin" LIMIT 1').first()
+      if (adminUser) {
+        await db.prepare(`
+          UPDATE users SET email = ? WHERE role = "admin"
+        `).bind('it@sapphiremfg.com').run()
+        console.log('✅ Updated admin email to it@sapphiremfg.com')
+      }
+
       // Update existing users to have email preferences if they don't exist
       await db.prepare(`
         UPDATE users SET 
