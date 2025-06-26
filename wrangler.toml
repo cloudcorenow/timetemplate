@@ -3,6 +3,10 @@ main = "src/worker.js"
 compatibility_date = "2025-06-25"
 compatibility_flags = ["nodejs_compat"]
 
+# Wrangler v4 configuration
+[build]
+command = "npm run build"
+
 [[d1_databases]]
 binding = "DB"
 database_name = "timeoff-manager-db"
