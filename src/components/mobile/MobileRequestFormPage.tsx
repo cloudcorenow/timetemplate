@@ -130,8 +130,8 @@ const MobileRequestFormPage: React.FC = () => {
     try {
       await addRequest({
         employee: user,
-        startDate: range.from,
-        endDate: range.to || range.from,
+        startDate: new Date(range.from.getFullYear(), range.from.getMonth(), range.from.getDate()),
+        endDate: new Date((range.to || range.from).getFullYear(), (range.to || range.from).getMonth(), (range.to || range.from).getDate()),
         type,
         reason,
         ...(isTimeEditRequest && {
