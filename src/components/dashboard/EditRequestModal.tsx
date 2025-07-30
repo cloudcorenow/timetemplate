@@ -70,6 +70,18 @@ const EditRequestModal: React.FC<EditRequestModalProps> = ({
     setIsSaving(true);
 
     try {
+      // Validate dates
+      if (!formData.startDate || !formData.endDate) {
+        throw new Error('Start date and end date are required');
+      }
+
+      // For time edit requests, validate time fields
+      if (isTimeEditRequest) {
+        if (!formData.requestedClockIn || !formData.requestedClockOut) {
+          throw new Error('Requested clock in and clock out times are required for time edit requests');
+        }
+      }
+
       // Create updated request object
       const updatedRequest: TimeOffRequest = {
         ...request,
@@ -77,10 +89,11 @@ const EditRequestModal: React.FC<EditRequestModalProps> = ({
         endDate: new Date(formData.endDate),
         reason: formData.reason,
         type: formData.type,
-        originalClockIn: formData.originalClockIn,
-        originalClockOut: formData.originalClockOut,
-        requestedClockIn: formData.requestedClockIn,
-        requestedClockOut: formData.requestedClockOut
+        originalClockIn: formData.originalClockIn || undefined,
+        originalClockOut: formData.originalClockOut || undefined,
+        requestedClockIn: formData.requestedClockIn || undefined,
+        requestedClockOut: formData.requestedClockOut || undefined,
+        updatedAt: new Date()
       };
 
       await updateRequest(updatedRequest);
@@ -88,7 +101,7 @@ const EditRequestModal: React.FC<EditRequestModalProps> = ({
       addToast({
         type: 'success',
         title: 'Request Updated',
-        message: 'Your time-off request has been updated successfully'
+        message: `Request updated successfully. New dates: ${format(new Date(formData.startDate), 'MMM d')} - ${format(new Date(formData.endDate), 'MMM d, yyyy')}`
       });
       
       onClose();
@@ -97,7 +110,7 @@ const EditRequestModal: React.FC<EditRequestModalProps> = ({
       addToast({
         type: 'error',
         title: 'Update Failed',
-        message: 'Failed to update the request. Please try again.'
+        message: error instanceof Error ? error.message : 'Failed to update the request. Please try again.'
       });
     } finally {
       setIsSaving(false);
