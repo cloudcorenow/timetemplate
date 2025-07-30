@@ -98,9 +98,17 @@ export const useRequestStore = create<RequestState>((set, get) => ({
   addRequest: async (requestData) => {
     set({ isLoading: true, error: null });
     try {
+      // Format dates to avoid timezone issues
+      const formatDateForAPI = (date: Date) => {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+      };
+
       await apiService.createRequest({
-        startDate: requestData.startDate.toISOString().split('T')[0],
-        endDate: requestData.endDate.toISOString().split('T')[0],
+        startDate: formatDateForAPI(requestData.startDate),
+        endDate: formatDateForAPI(requestData.endDate),
         type: requestData.type,
         reason: requestData.reason,
         originalClockIn: requestData.originalClockIn,
