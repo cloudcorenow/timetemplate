@@ -139,15 +139,21 @@ export const useRequestStore = create<RequestState>((set, get) => ({
   updateRequest: async (request) => {
     set({ isLoading: true, error: null });
     try {
+      console.log('🔄 Updating request:', request.id, 'with new dates:', {
+        startDate: request.startDate,
+        endDate: request.endDate,
+        reason: request.reason
+      });
+      
       // In a real app, this would call the API to update the request
-      // For now, we'll just update the local store
+      // await apiService.updateRequest(request.id, request);
       
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 500));
+      // For now, simulate API call and update local store
+      await new Promise(resolve => setTimeout(resolve, 800));
       
-      // Update the request in the local store
+      // Update the request in the local store with the new data
       const updatedRequests = get().requests.map(r => 
-        r.id === request.id ? request : r
+        r.id === request.id ? { ...request, updatedAt: new Date() } : r
       );
       
       // Update cache and state
@@ -162,7 +168,7 @@ export const useRequestStore = create<RequestState>((set, get) => ({
         })
       }));
       
-      console.log('✅ Request updated successfully');
+      console.log('✅ Request updated successfully:', request.id);
     } catch (error) {
       console.error('Error updating request:', error);
       set({ error: 'Failed to update request', isLoading: false });
