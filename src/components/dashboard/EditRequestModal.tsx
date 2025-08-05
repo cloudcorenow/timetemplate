@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, Calendar, Clock, FileText, User, AlertTriangle } from 'lucide-react';
-import { format } from 'date-fns';
+import { format, parse } from 'date-fns';
 import { useToast } from '../../hooks/useToast';
 import { useRequestStore } from '../../store/requestStore';
 import { TimeOffRequest, RequestType } from '../../types/request';
@@ -85,8 +85,8 @@ const EditRequestModal: React.FC<EditRequestModalProps> = ({
       // Create updated request object
       const updatedRequest: TimeOffRequest = {
         ...request,
-        startDate: new Date(formData.startDate),
-        endDate: new Date(formData.endDate),
+        startDate: parse(formData.startDate, 'yyyy-MM-dd', new Date()),
+        endDate: parse(formData.endDate, 'yyyy-MM-dd', new Date()),
         reason: formData.reason,
         type: formData.type,
         originalClockIn: formData.originalClockIn || undefined,
@@ -101,7 +101,7 @@ const EditRequestModal: React.FC<EditRequestModalProps> = ({
       addToast({
         type: 'success',
         title: 'Request Updated',
-        message: `Request updated successfully. New dates: ${format(new Date(formData.startDate), 'MMM d')} - ${format(new Date(formData.endDate), 'MMM d, yyyy')}`
+             message: `Request updated successfully. New dates: ${format(parse(formData.startDate, 'yyyy-MM-dd', new Date()), 'MMM d')} - ${format(parse(formData.endDate, 'yyyy-MM-dd', new Date()), 'MMM d, yyyy')}`
       });
       
       onClose();
