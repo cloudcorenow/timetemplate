@@ -7,7 +7,7 @@ class ApiService {
     this.token = localStorage.getItem('token');
   }
 
-  private async request(endpoint: string, options: RequestInit = {}) {
+   private async request<T = any>(endpoint: string, options: RequestInit = {}): Promise<T | null> {
     const url = `${API_BASE_URL}${endpoint}`;
     const config = {
       headers: {
@@ -20,12 +20,18 @@ class ApiService {
 
     try {
       const response = await fetch(url, config);
-      
+      const contentType = response.headers.get('content-type');
+
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
+      const errorData =
+          contentType && contentType.includes('application/json')
+            ? await response.json().catch(() => ({}))
+            : {};
         throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
       }
-      
+      if (response.status === 204 || !contentType || !contentType.includes('application/json')) {
+        return null;
+      }
       return response.json();
     } catch (error) {
       if (error instanceof TypeError && error.message.includes('fetch')) {
