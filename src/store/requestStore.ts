@@ -3,6 +3,12 @@ import { TimeOffRequest, RequestStatus } from '../types/request';
 import { User } from '../types/user';
 import { apiService } from '../services/api';
 
+// Parse a date string (YYYY-MM-DD) as a local date to avoid timezone offsets
+const parseLocalDate = (d: string) => {
+  const [y, m, day] = d.split('-').map(Number);
+  return new Date(y, m - 1, day);
+};
+
 interface RequestState {
   requests: TimeOffRequest[];
   isLoading: boolean;
@@ -59,8 +65,8 @@ export const useRequestStore = create<RequestState>((set, get) => ({
       // Transform API response to match frontend types
       const transformedRequests = requests.map((request: any) => ({
         ...request,
-        startDate: new Date(request.startDate),
-        endDate: new Date(request.endDate),
+   startDate: parseLocalDate(request.startDate),
+        endDate: parseLocalDate(request.endDate),
         createdAt: new Date(request.createdAt),
         updatedAt: new Date(request.updatedAt)
       }));
